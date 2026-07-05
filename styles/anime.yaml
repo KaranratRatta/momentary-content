@@ -1,0 +1,19 @@
+# ─── Anime / Manga Style ────────────────────────────────────────────────────
+name: "anime"
+description: "Japanese anime-style cel-shaded illustrations"
+
+base_prompt: >
+  Anime style illustration. Cel-shaded flat colors. Clean bold line art.
+  Large expressive eyes on characters. Vibrant color palette.
+  Dynamic camera angles. Manga-inspired composition.
+  No realistic shading. No 3D. Pure 2D anime aesthetic.
+
+character_rules:
+  - "Anime-style characters with large eyes and expressive faces"
+  - "Stylized features appropriate to the character (fur, feathers, or hair)"
+  - "Exaggerated emotional expressions (sweat drops, blush, etc.)"
+  - "Clean line art with flat color fills"
+  - "Never draw humans unless the story explicitly mentions them"
+
+image_size: "landscape_16_9"
+num_inference_steps: 6

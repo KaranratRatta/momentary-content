@@ -1,0 +1,24 @@
+# ─── Script-to-Image Pipeline Configuration ────────────────────────────────
+# Change `style` to switch between visual styles (ms_paint, realistic, anime).
+# Change `model` to use a different FAL model.
+
+pipeline:
+  style: "ms_paint"              # Style template name (matches styles/<name>.yaml)
+  model: "fal-ai/flux/schnell"   # FAL model endpoint
+  concurrency: 8                 # How many images to generate in parallel
+  output_dir: "./output"
+
+parser:
+  # Regex pattern to extract timestamps. Supports HH:MM:SS, MM:SS, and SS formats.
+  timestamp_pattern: "(\\d{1,2}:\\d{2}(?::\\d{2})?)"
+
+generator:
+  num_inference_steps: 4         # Lower = faster, less detail. 4 is good for MS Paint.
+  sync_mode: "sync"              # "sync" or "async" — sync is simpler for small batches
+  image_size: "landscape_16_9"   # landscape_16_9, square_hd, portrait_16_9, etc.
+
+video:                           # Future: video assembly settings
+  fps: 30
+  transition: "fade"
+  transition_duration: 0.3
+  output_format: "mp4"

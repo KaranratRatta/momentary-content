@@ -1,0 +1,19 @@
+# ─── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# ─── Environment ────────────────────────────────────────────────────────────
+.env
+.env.local
+
+# ─── Output (generated images + manifests) ─────────────────────────────────
+output/
+!output/.gitkeep
+
+# ─── OS files ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

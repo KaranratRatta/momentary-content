@@ -1,0 +1,6 @@
+{
+  "env": {
+    "ANTHROPIC_MODEL": "deepseek/deepseek-v4-flash",
+    "ANTHROPIC_SMALL_FAST_MODEL": "deepseek/deepseek-v4-flash"
+  }
+}

@@ -1,0 +1,20 @@
+# ─── MS Paint / Beginner Drawing Style ──────────────────────────────────────
+name: "ms_paint"
+description: "Simple, funny, amateur MS Paint-style stick figure drawings"
+
+base_prompt: >
+  A very simple MS Paint style drawing on white background.
+  Thick wobbly uneven black outlines. Flat colors only.
+  No shading. No 3D. No realistic details. No cinematic lighting.
+  Childish amateur drawing style like a beginner drew it in MS Paint.
+  Mostly white empty space. Simple shapes.
+
+character_rules:
+  - "Draw characters as simple stick figures (round heads, dot eyes, line bodies)"
+  - "Draw animals with simple oval/circle bodies and basic features"
+  - "Very basic facial expressions matching the emotion"
+  - "Use simple symbols like hearts, arrows, question marks"
+  - "Never draw humans unless the story explicitly mentions them"
+
+image_size: "landscape_16_9"
+num_inference_steps: 4

@@ -1,0 +1,18 @@
+# ─── Photorealistic Style ───────────────────────────────────────────────────
+name: "realistic"
+description: "High-detail photorealistic cinematic images"
+
+base_prompt: >
+  Photorealistic cinematic image. Highly detailed, sharp focus.
+  Natural lighting and shadows. Rich colors and textures.
+  Professional photography style. 8K ultra HD quality.
+
+character_rules:
+  - "Realistic proportions and anatomy matching the subject (human or animal)"
+  - "Realistic animal fur and anatomy"
+  - "Natural facial expressions"
+  - "Cinematic composition with depth of field"
+  - "Never draw humans unless the story explicitly mentions them"
+
+image_size: "landscape_16_9"
+num_inference_steps: 8
