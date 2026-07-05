@@ -1,9 +1,15 @@
 """
 parser.py — Stage 1: Parse script with timestamps into structured segments.
 
-Reads a text file with timestamps like:
-    00:00:00 this puppy lost his parents
-    00:00:02 found this duck he was shivering
+Reads a text file with timestamps and extracts each segment.
+
+Supports two formats:
+  - Newline-separated (traditional):
+        00:00:00 this puppy lost his parents
+        00:00:02 found this duck
+
+  - Continuous (no newlines between timestamps):
+        00:00:00 this puppy lost his parents 00:00:02 found this duck
 
 Outputs: list of {timestamp_seconds, timestamp_str, text, segment_index}
 """
@@ -20,6 +26,9 @@ def parse_script(
     """
     Parse a script file into timestamped segments.
 
+    Works for both newline-separated and continuous formats.
+    Finds all timestamps in the text, then extracts the text between them.
+
     Args:
         script_path: Path to the script text file.
         timestamp_pattern: Regex to match timestamps.
@@ -27,23 +36,28 @@ def parse_script(
     Returns:
         List of dicts: [{timestamp_seconds, timestamp_str, text, segment_index}, ...]
     """
-    raw = Path(script_path).read_text(encoding="utf-8")
-    lines = raw.strip().split("\n")
-
-    segments = []
+    raw = Path(script_path).read_text(encoding="utf-8").strip()
     pattern = re.compile(timestamp_pattern)
 
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+    # Find all timestamp matches with their positions
+    matches = list(pattern.finditer(raw))
+    if not matches:
+        return []
 
-        match = pattern.match(line)
-        if not match:
-            continue
-
+    segments = []
+    for i, match in enumerate(matches):
         ts_str = match.group(1)
-        text = line[match.end() :].strip()
+        start = match.end()
+
+        # Text goes from after this timestamp until the next timestamp
+        if i + 1 < len(matches):
+            end = matches[i + 1].start()
+        else:
+            end = len(raw)
+
+        text = raw[start:end].strip()
+        # Clean up any leftover newlines in the text
+        text = " ".join(text.split())
 
         segments.append(
             {

@@ -3,6 +3,7 @@
 
 # Core
 pyyaml>=6.0
+Pillow>=10.0
 
 # Video assembly (future — uncomment when ready)
 # moviepy>=1.0.3

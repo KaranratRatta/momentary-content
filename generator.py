@@ -2,10 +2,10 @@
 generator.py — Stage 3: Generate images from prompts via FAL API.
 
 Takes a list of segments with prompts, calls fal-ai/flux/schnell (or any
-FAL model) in parallel, and saves the images to disk.
+FAL model) in parallel, and saves the images to disk as PNG.
 
 Outputs:
-  - Images saved to output_dir as <segment_index>_<timestamp>.jpg
+  - Images saved to output_dir as <segment_index>_<timestamp>.png
   - manifest.json mapping timestamp → image_path
 """
 
@@ -13,18 +13,21 @@ import json
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from io import BytesIO
 from pathlib import Path
 from typing import List, Dict, Optional
 import urllib.request
 import urllib.error
 
+from PIL import Image
+
 
 FAL_BASE_URL = "https://fal.run"
 
 
-def _call_fal_sync(prompt: str, model: str, params: dict) -> Optional[str]:
+def _call_fal_sync(prompt: str, model: str, params: dict) -> Optional[bytes]:
     """
-    Call FAL API synchronously. Returns the image URL or None on failure.
+    Call FAL API synchronously. Returns the raw image bytes or None on failure.
     """
     url = f"{FAL_BASE_URL}/{model}"
     headers = {
@@ -38,10 +41,6 @@ def _call_fal_sync(prompt: str, model: str, params: dict) -> Optional[str]:
         "num_inference_steps": params.get("num_inference_steps", 4),
     }
 
-    if params.get("sync_mode") == "async":
-        # For future: async queue support
-        pass
-
     try:
         req = urllib.request.Request(
             url,
@@ -51,11 +50,19 @@ def _call_fal_sync(prompt: str, model: str, params: dict) -> Optional[str]:
         )
         with urllib.request.urlopen(req, timeout=120) as resp:
             result = json.loads(resp.read().decode("utf-8"))
+
         images = result.get("images", [])
-        if images:
-            return images[0]["url"]
-        print(f"  ⚠ No images in response: {result.get('detail', 'unknown')}")
-        return None
+        if not images:
+            print(f"  ⚠ No images in response: {result.get('detail', 'unknown')}")
+            return None
+
+        image_url = images[0]["url"]
+
+        # Download the actual image bytes
+        img_req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(img_req, timeout=120) as img_resp:
+            return img_resp.read()
+
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
         print(f"  ✗ HTTP {e.code}: {body[:200]}")
@@ -65,13 +72,14 @@ def _call_fal_sync(prompt: str, model: str, params: dict) -> Optional[str]:
         return None
 
 
-def _download_image(url: str, save_path: str) -> bool:
-    """Download image from URL to local path. Returns True on success."""
+def _save_as_png(image_bytes: bytes, save_path: str) -> bool:
+    """Convert JPEG bytes to PNG and save. Returns True on success."""
     try:
-        urllib.request.urlretrieve(url, save_path)
+        img = Image.open(BytesIO(image_bytes))
+        img.save(save_path, "PNG")
         return True
     except Exception as e:
-        print(f"  ✗ Download failed: {e}")
+        print(f"  ✗ PNG conversion failed: {e}")
         return False
 
 
@@ -99,7 +107,6 @@ def generate_images(
     img_dir = Path(output_dir) / "images"
     img_dir.mkdir(parents=True, exist_ok=True)
 
-    results = []
     total = len(segments)
     completed = 0
     failed = 0
@@ -114,25 +121,25 @@ def generate_images(
             prompt = seg.get("prompt", seg.get("text", ""))
             idx = seg["segment_index"]
             ts = seg["timestamp_str"].replace(":", "-")
-            filename = f"{idx:03d}_{ts}.jpg"
+            filename = f"{idx:03d}_{ts}.png"
 
             future = executor.submit(_call_fal_sync, prompt, model, params)
             future_map[future] = (seg, filename)
 
         for future in as_completed(future_map):
             seg, filename = future_map[future]
-            image_url = future.result()
+            image_bytes = future.result()
 
-            if image_url:
+            if image_bytes:
                 save_path = str(img_dir / filename)
-                if _download_image(image_url, save_path):
-                    seg["image_url"] = image_url
+                if _save_as_png(image_bytes, save_path):
+                    seg["image_url"] = "saved locally"
                     seg["image_path"] = save_path
                     completed += 1
                     print(f"  ✓ [{completed}/{total}] {seg['timestamp_str']} — {filename}")
                 else:
                     failed += 1
-                    print(f"  ✗ [{completed+failed}/{total}] Download failed: {seg['timestamp_str']}")
+                    print(f"  ✗ [{completed+failed}/{total}] PNG save failed: {seg['timestamp_str']}")
             else:
                 failed += 1
                 print(f"  ✗ [{completed+failed}/{total}] Generation failed: {seg['timestamp_str']}")
