@@ -20,11 +20,16 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+from dotenv import load_dotenv
 
 from parser import parse_script
 from prompt_builder import build_all_prompts
+from llm_client import LLMClient
 from generator import generate_images
 from video_assembler import assemble_video
+
+# Load API keys from .env (FAL_KEY, OPENROUTER_API_KEY) if present.
+load_dotenv()
 
 
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -56,6 +61,7 @@ def run_pipeline(
     config = load_config(config_path)
     pipeline_cfg = config.get("pipeline", {})
     parser_cfg = config.get("parser", {})
+    prompt_cfg = config.get("prompt_builder", {})
     generator_cfg = config.get("generator", {})
     video_cfg = config.get("video", {})
 
@@ -88,7 +94,18 @@ def run_pipeline(
 
     # ── Stage 2: Build prompts ─────────────────────────────────────────────
     print(f"\n✏️  Stage 2: Building prompts...")
-    segments = build_all_prompts(segments, style_config)
+    llm = LLMClient.from_config(prompt_cfg)
+    if llm.is_available():
+        print(f"   🤖 LLM: OpenRouter / {prompt_cfg.get('model', 'default')}")
+
+    bible_path = str(Path(output_dir) / "story_bible.json")
+    segments = build_all_prompts(
+        segments,
+        style_config,
+        llm=llm,
+        concurrency=prompt_cfg.get("concurrency", 8),
+        bible_path=bible_path if prompt_cfg.get("build_bible", True) else None,
+    )
 
     prompts_path = Path(output_dir) / "prompts.json"
     prompts_path.write_text(json.dumps(segments, indent=2))

@@ -169,6 +169,9 @@ def generate_images(
 # ─── CLI usage ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import sys
+    from dotenv import load_dotenv
+
+    load_dotenv()  # load FAL_KEY from .env if present
 
     prompts_path = sys.argv[1] if len(sys.argv) > 1 else "output/prompts.json"
     segments = json.loads(Path(prompts_path).read_text())

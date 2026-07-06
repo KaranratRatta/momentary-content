@@ -12,6 +12,18 @@ parser:
   # Regex pattern to extract timestamps. Supports HH:MM:SS, MM:SS, and SS formats.
   timestamp_pattern: "(\\d{1,2}:\\d{2}(?::\\d{2})?)"
 
+prompt_builder:
+  # LLM used to write visual scene prompts (OpenRouter, OpenAI-compatible API).
+  # Set OPENROUTER_API_KEY in your environment. Without it, a simple offline
+  # fallback is used so --skip-generate previews still work.
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  model: "z-ai/glm-5.2@preset/main"   # any model id served by OpenRouter
+  api_key_env: "OPENROUTER_API_KEY"
+  temperature: 0.8                    # higher = more creative scene depictions
+  concurrency: 8                      # parallel LLM calls for scene prompts
+  build_bible: true                   # build a character/visual bible first
+
 generator:
   num_inference_steps: 4         # Lower = faster, less detail. 4 is good for MS Paint.
   sync_mode: "sync"              # "sync" or "async" — sync is simpler for small batches

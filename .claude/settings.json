@@ -1,6 +1,6 @@
 {
   "env": {
-    "ANTHROPIC_MODEL": "deepseek/deepseek-v4-flash",
-    "ANTHROPIC_SMALL_FAST_MODEL": "deepseek/deepseek-v4-flash"
+    "ANTHROPIC_MODEL": "z-ai/glm-5.2@preset/main",
+    "ANTHROPIC_SMALL_FAST_MODEL": "deepseek/deepseek-v4-flash@preset/main"
   }
 }

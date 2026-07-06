@@ -28,6 +28,7 @@ def parse_script(
 
     Works for both newline-separated and continuous formats.
     Finds all timestamps in the text, then extracts the text between them.
+    Timestamps are colon-separated: HH:MM:SS or MM:SS.
 
     Args:
         script_path: Path to the script text file.

@@ -12,8 +12,8 @@ is fully configurable via YAML templates. Each story gets its own folder.
 # Install dependencies
 pip install -r requirements.txt
 
-# Set your FAL API key
-export FAL_KEY="your-key-here"
+# Configure API keys (copy template, fill in FAL_KEY + OPENROUTER_API_KEY)
+cp .env.example .env
 
 # Run the full pipeline with the example script
 python pipeline.py --script scripts/input.txt --story puppy-duck --style ms_paint
@@ -39,9 +39,10 @@ python pipeline.py --script scripts/input.txt --story puppy-duck --style ms_pain
                      ▼
 ┌──────────────────────────────────────────────────┐
 │  2. prompt_builder.py                              │
-│     Segments + style template → tailored prompts   │
-│     Detects emotion, story stage automatically     │
+│     LLM writes visual scene depictions             │
+│     Story bible + per-scene prompts (parallel)     │
 │     Output: output/<story>/prompts.json            │
+│            output/<story>/story_bible.json         │
 └────────────────────┬─────────────────────────────┘
                      │
                      ▼
@@ -84,15 +85,15 @@ python pipeline.py --script scripts/input.txt --story my-story --output-dir ./my
 
 ## Script Format
 
-Timestamps can be in any of these formats:
+Timestamps use a colon-separated format — `HH:MM:SS` or `MM:SS`:
 
 ```
 HH:MM:SS text here...
 MM:SS text here...
-SS text here...
 ```
 
-One segment per line. The timestamp must be at the start of the line.
+One segment per line, timestamp at the start of the line. (The parser scans
+for timestamps anywhere, so a continuous single-line script also works.)
 
 Example (`scripts/input.txt`):
 ```
@@ -121,6 +122,8 @@ See `config.yaml` for all settings:
 - `pipeline.style` — default style name
 - `pipeline.model` — FAL model endpoint
 - `pipeline.concurrency` — parallel image generation count
+- `prompt_builder.model` — OpenRouter model id for scene-prompt generation
+- `prompt_builder.concurrency` — parallel LLM calls for scene prompts
 - `generator.num_inference_steps` — quality/speed tradeoff
 - `generator.image_size` — aspect ratio (landscape_16_9, square_hd, etc.)
 
@@ -149,7 +152,7 @@ without files mixing together.
 # Just parse
 python parser.py scripts/input.txt > output/story-name/segments.json
 
-# Parse → build prompts
+# Parse → build prompts (needs OPENROUTER_API_KEY; add --no-llm for offline fallback)
 python prompt_builder.py output/story-name/segments.json styles/ms_paint.yaml > output/story-name/prompts.json
 
 # Just generate images from existing prompts
@@ -168,11 +171,20 @@ When you're ready to add video, uncomment the `moviepy` dependency in
 - `image_path` — the image file to show
 - `text` — narration text (for subtitles or TTS)
 
-## FAL API Key
+## API Keys
 
-Set your key as an environment variable:
+Keys are loaded from a `.env` file (gitignored; see `.env.example`). Copy the
+template and fill it in:
+
 ```bash
-export FAL_KEY="<your-key>"
+cp .env.example .env
 ```
 
-The key format is: `app-id:secret` (found in FAL dashboard → API Keys).
+- **FAL_KEY** — image generation. Format: `app-id:secret` (FAL dashboard → API Keys).
+- **OPENROUTER_API_KEY** — LLM scene-prompt generation (https://openrouter.ai/keys).
+  The model is configured via `prompt_builder.model` in `config.yaml` (any model
+  id OpenRouter serves). Without a key, the pipeline falls back to simple
+  deterministic prompts so `--skip-generate` previews still work, but scene
+  quality will be much lower.
+
+Keys may also be exported as regular environment variables if you prefer.

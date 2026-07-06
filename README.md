@@ -27,9 +27,10 @@ Each story gets its own folder. The visual style is fully configurable. Video as
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Set your FAL API key
-#    Get one at https://fal.ai/dashboard/keys
-export FAL_KEY="your-app-id:your-secret"
+# 2. Configure API keys
+cp .env.example .env
+#    then edit .env and fill in FAL_KEY (https://fal.ai/dashboard/keys)
+#    and OPENROUTER_API_KEY (https://openrouter.ai/keys)
 
 # 3. Run the pipeline
 python pipeline.py --script scripts/input.txt --story puppy-duck --style ms_paint
@@ -80,23 +81,27 @@ The pipeline runs in 4 stages:
 ┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
 │  1. Parse    │ →  │ 2. Build     │ →  │ 3. Generate  │ →  │ 4. Assemble  │
 │   script     │    │   prompts    │    │   images     │    │   video      │
-│  (timestamps)│    │  (style +    │    │  (FAL API)   │    │  [Future]    │
-│              │    │   emotion)   │    │              │    │              │
+│  (timestamps)│    │  (LLM +      │    │  (FAL API)   │    │  [Future]    │
+│              │    │   style)     │    │              │    │              │
 └─────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
 | Stage | File | What it does |
 |-------|------|-------------|
 | 1 | `parser.py` | Extracts timestamps and text from the script |
-| 2 | `prompt_builder.py` | Analyzes each segment for emotion + story stage, then builds a tailored prompt using the chosen style template |
+| 2 | `prompt_builder.py` | Uses an LLM (via OpenRouter) to write a visual depiction of each scene — a story bible keeps characters consistent across scenes, then per-scene prompts are generated in parallel |
 | 3 | `generator.py` | Calls `fal-ai/flux/schnell` in parallel for all prompts, downloads the images |
 | 4 | `video_assembler.py` | [Not yet implemented] Stitches images + TTS audio into a video |
 
-The prompt builder automatically detects:
-- **Emotion** — sad, happy, scared, confused, hopeful, tense, surprised
-- **Story stage** — setup, conflict, turning point, resolution
+The prompt builder writes a real **visual depiction** of each moment (who is on
+screen, what they're doing, expression, lighting, setting) — it doesn't just
+dump the narration text into a style template. A one-call **story bible** locks
+each character's appearance so they stay identical across long videos (~100
+scenes). Each prompt bakes in the chosen visual style.
 
-Each prompt is tailored to match what's happening at that exact moment in the story.
+> No `OPENROUTER_API_KEY`? Add `--no-llm` (or run with no key) to use a simple
+> offline fallback so `--skip-generate` previews still work — scene quality
+> will be much lower.
 
 ---
 
@@ -140,6 +145,9 @@ python pipeline.py --script scripts/space.txt --story space-odyssey --style real
 ```bash
 python pipeline.py --script scripts/input.txt --story demo --skip-generate
 # Builds prompts.json so you can review before spending API credits
+
+# No OpenRouter key? Use the simple offline fallback:
+python pipeline.py --script scripts/input.txt --story demo --skip-generate --no-llm
 ```
 
 ### Control speed
@@ -203,27 +211,36 @@ pipeline:
   concurrency: 8                 # Parallel image generations
   output_dir: "./output"         # Base output directory
 
+prompt_builder:                  # LLM scene-prompt generation
+  model: "anthropic/claude-sonnet-4"   # any OpenRouter model id
+  temperature: 0.8               # higher = more creative depictions
+  concurrency: 8                 # parallel LLM calls for scene prompts
+  build_bible: true              # build a character/visual bible first
+
 generator:
   num_inference_steps: 4         # Quality/speed tradeoff
   image_size: "landscape_16_9"   # Aspect ratio
 ```
 
+API keys live in `.env` (see `.env.example`), not in `config.yaml`.
+
 ---
 
 ## Script Format
 
-Your script must have timestamps at the start of each line:
+Your script must have a timestamp at the start of each line, in `HH:MM:SS` or
+`MM:SS` format:
 
 ```
 HH:MM:SS the text of what's being said at this moment
 MM:SS shorter timestamps also work
-SS seconds-only format too
 ```
 
 **Rules:**
 - One segment per line
 - Timestamp must be at the very beginning of the line
 - Every timestamp gets one image
+- The parser scans anywhere, so a continuous single-line script also works
 
 ---
 
@@ -234,6 +251,7 @@ output/
 └── <story-name>/
     ├── segments.json         # Parsed script data
     ├── prompts.json          # Full prompts sent to the API
+    ├── story_bible.json      # Character & visual bible (LLM)
     ├── manifest.json         # Timestamp → image mapping
     ├── images/
     │   ├── 000_00-00-00.jpg
@@ -270,7 +288,8 @@ When you add video assembly, the video assembler reads this file to know which i
 # Stage 1: Parse only
 python parser.py scripts/input.txt > output/story/segments.json
 
-# Stage 2: Build prompts from existing segments
+# Stage 2: Build prompts from existing segments (needs OPENROUTER_API_KEY;
+#           add --no-llm for the offline fallback)
 python prompt_builder.py output/story/segments.json styles/ms_paint.yaml > output/story/prompts.json
 
 # Stage 3: Generate images from existing prompts
@@ -282,17 +301,26 @@ python generator.py output/story/prompts.json
 
 ---
 
-## API Key
+## API Keys
 
-This tool requires a FAL API key. Get one at [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys).
-
-Set it as an environment variable:
+Keys are loaded from a `.env` file (gitignored). Copy the template and fill it in:
 
 ```bash
-export FAL_KEY="your-app-id:your-secret"
+cp .env.example .env
 ```
 
-The key format is `app-id:secret` (a UUID, a colon, then another UUID).
+```dotenv
+# .env
+FAL_KEY=your-app-id:your-secret                # image generation — fal.ai/dashboard/keys
+OPENROUTER_API_KEY=your-openrouter-key         # LLM prompts — openrouter.ai/keys
+```
+
+- **FAL** (`FAL_KEY`, format `app-id:secret`) — required for image generation.
+- **OpenRouter** (`OPENROUTER_API_KEY`) — required for LLM scene prompts.
+  Without it, the pipeline falls back to simple deterministic prompts
+  (`--no-llm`), so previews still work but scene quality drops.
+
+Keys can also be exported as regular environment variables if you prefer.
 
 ---
 
@@ -315,7 +343,7 @@ can be a drop-in module.
 ## Requirements
 
 - Python 3.9+
-- `FAL_KEY` environment variable
+- `FAL_KEY` and `OPENROUTER_API_KEY` (in `.env` — see `.env.example`)
 - `pip install -r requirements.txt`
 
 ---
@@ -326,11 +354,13 @@ can be a drop-in module.
 long_form_content/
 ├── pipeline.py              # Main orchestrator
 ├── parser.py                # Stage 1: script → segments
-├── prompt_builder.py        # Stage 2: segments → prompts
+├── prompt_builder.py        # Stage 2: segments → LLM visual prompts
+├── llm_client.py            # OpenRouter (OpenAI-compatible) chat client
 ├── generator.py             # Stage 3: prompts → images
 ├── video_assembler.py       # Stage 4: [Future] video
 ├── config.yaml              # Main configuration
 ├── requirements.txt
+├── .env.example             # API key template (copy to .env)
 ├── README.md
 ├── CLAUDE.md                # Claude Code project docs
 ├── styles/
@@ -339,10 +369,12 @@ long_form_content/
 │   └── anime.yaml
 ├── scripts/
 │   └── input.txt            # Example script
+├── tests/                   # Unit tests (pytest)
 └── output/
     └── <story-name>/
         ├── segments.json
         ├── prompts.json
+        ├── story_bible.json
         ├── manifest.json
         ├── images/
         └── video/           # [Future]

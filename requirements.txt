@@ -4,16 +4,16 @@
 # Core
 pyyaml>=6.0
 Pillow>=10.0
+python-dotenv>=1.0       # loads API keys from .env
+
+# LLM prompt generation (OpenRouter is OpenAI-compatible)
+openai>=1.0
 
 # Video assembly (future — uncomment when ready)
 # moviepy>=1.0.3
 
 # Audio / TTS (future — uncomment when ready)
-# openai>=1.0  # for TTS
 # edge-tts>=6.0
 
-# Image processing (future — uncomment when ready)
-# Pillow>=10.0
-
 # Development
-# pytest>=7.0
+pytest>=7.0
