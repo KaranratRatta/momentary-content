@@ -1,0 +1,155 @@
+import os
+import random
+import numpy as np
+from PIL import Image
+from moviepy.editor import (
+    ImageClip,
+    AudioFileClip,
+    CompositeVideoClip,
+    concatenate_videoclips,
+    ColorClip,
+)
+from config import (
+    VIDEO_WIDTH,
+    VIDEO_HEIGHT,
+    FPS,
+    TRANSITION_DURATION,
+    OUTPUT_DIR,
+)
+
+
+def get_audio_duration(audio_path: str) -> float:
+    audio = AudioFileClip(audio_path)
+    duration = audio.duration
+    audio.close()
+    return duration
+
+
+def apply_ken_burns(image_path: str, duration: float, scene_index: int) -> ImageClip:
+    img = Image.open(image_path)
+    img_array = np.array(img)
+
+    effects = ["zoom_in", "zoom_out", "pan_left", "pan_right"]
+    effect = random.choice(effects)
+
+    zoom_start = 1.15
+    zoom_end = 1.0 if effect in ["zoom_in", "pan_left", "pan_right"] else 1.15
+
+    if effect == "zoom_out":
+        zoom_start, zoom_end = 1.0, 1.15
+
+    def make_frame(t):
+        progress = t / duration
+        current_zoom = zoom_start + (zoom_end - zoom_start) * progress
+        current_zoom = max(current_zoom, 1.0)
+
+        h, w = img_array.shape[:2]
+        new_w = int(w * current_zoom)
+        new_h = int(h * current_zoom)
+
+        img_resized = img.resize((new_w, new_h), Image.LANCZOS)
+        resized_array = np.array(img_resized)
+
+        rh, rw = resized_array.shape[:2]
+
+        if effect in ["zoom_in", "zoom_out"]:
+            cx = rw // 2
+            cy = rh // 2
+        elif effect == "pan_left":
+            cx = int(rw * 0.65)
+            cy = rh // 2
+        elif effect == "pan_right":
+            cx = int(rw * 0.35)
+            cy = rh // 2
+        else:
+            cx = rw // 2
+            cy = rh // 2
+
+        x1 = max(0, cx - VIDEO_WIDTH // 2)
+        y1 = max(0, cy - VIDEO_HEIGHT // 2)
+        x2 = min(rw, x1 + VIDEO_WIDTH)
+        y2 = min(rh, y1 + VIDEO_HEIGHT)
+
+        crop = resized_array[y1:y2, x1:x2]
+
+        if crop.shape[0] < VIDEO_HEIGHT or crop.shape[1] < VIDEO_WIDTH:
+            pad_h = max(0, VIDEO_HEIGHT - crop.shape[0])
+            pad_w = max(0, VIDEO_WIDTH - crop.shape[1])
+            crop = np.pad(
+                crop,
+                ((0, pad_h), (0, pad_w), (0, 0)),
+                mode="edge",
+            )
+
+        crop = crop[:VIDEO_HEIGHT, :VIDEO_WIDTH]
+        return crop
+
+    clip = ImageClip(make_frame).with_duration(duration).with_fps(FPS)
+    return clip
+
+
+def add_crossfade(clips: list) -> list:
+    if len(clips) <= 1:
+        return clips
+
+    result = []
+    for i, clip in enumerate(clips):
+        if i < len(clips) - 1:
+            fade_out_duration = min(TRANSITION_DURATION, clip.duration * 0.3)
+            clip = clip.with_effects([]) if hasattr(clip, 'with_effects') else clip
+            try:
+                clip = clip.crossfadeout(fade_out_duration)
+            except (AttributeError, TypeError):
+                pass
+        if i > 0:
+            fade_in_duration = min(TRANSITION_DURATION, clip.duration * 0.3)
+            try:
+                clip = clip.crossfadein(fade_in_duration)
+            except (AttributeError, TypeError):
+                pass
+        result.append(clip)
+    return result
+
+
+def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
+    print("  Assembling video...")
+
+    clips = []
+    for i, (img_path, audio_path) in enumerate(zip(image_paths, audio_paths)):
+        audio_duration = get_audio_duration(audio_path)
+        print(f"    Scene {i + 1}: {audio_duration:.1f}s audio, applying Ken Burns...")
+
+        video_clip = apply_ken_burns(img_path, audio_duration, i)
+        audio_clip = AudioFileClip(audio_path)
+
+        video_clip = video_clip.with_audio(audio_clip)
+        clips.append(video_clip)
+
+    print("  Adding transitions...")
+    clips = add_crossfade(clips)
+
+    print("  Concatenating scenes...")
+    final = concatenate_videoclips(clips, method="compose", padding=-TRANSITION_DURATION)
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in title)
+    output_path = os.path.join(OUTPUT_DIR, f"{safe_title}.mp4")
+
+    print(f"  Exporting to {output_path}...")
+    final.write_videofile(
+        output_path,
+        fps=FPS,
+        codec="libx264",
+        audio_codec="aac",
+        temp_audiofile=os.path.join(OUTPUT_DIR, "temp-audio.m4a"),
+        remove_temp=True,
+        preset="medium",
+        threads=4,
+    )
+
+    final.close()
+    for clip in clips:
+        clip.close()
+
+    print(f"  Video saved: {output_path}")
+    return output_path
