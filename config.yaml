@@ -18,7 +18,7 @@ prompt_builder:
   # fallback is used so --skip-generate previews still work.
   provider: "openrouter"
   base_url: "https://openrouter.ai/api/v1"
-  model: "z-ai/glm-5.2@preset/main"   # any model id served by OpenRouter
+  model: "z-ai/glm-5.2"            # any model id served by OpenRouter
   api_key_env: "OPENROUTER_API_KEY"
   temperature: 0.8                    # higher = more creative scene depictions
   concurrency: 8                      # parallel LLM calls for scene prompts
