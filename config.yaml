@@ -1,35 +1,34 @@
 # ─── Script-to-Image Pipeline Configuration ────────────────────────────────
-# Change `style` to switch between visual styles (ms_paint, realistic, anime).
-# Change `model` to use a different FAL model.
 
 pipeline:
-  style: "ms_paint"              # Style template name (matches styles/<name>.yaml)
-  model: "fal-ai/flux/schnell"   # FAL model endpoint
-  concurrency: 8                 # How many images to generate in parallel
+  style: "storybook"                 # Style template name (matches styles/<name>.yaml)
+  model: "fal-ai/krea-2/turbo"       # FAL model endpoint
+  concurrency: 8
   output_dir: "./output"
 
 parser:
-  # Regex pattern to extract timestamps. Supports HH:MM:SS, MM:SS, and SS formats.
   timestamp_pattern: "(\\d{1,2}:\\d{2}(?::\\d{2})?)"
 
 prompt_builder:
-  # LLM used to write visual scene prompts (OpenRouter, OpenAI-compatible API).
-  # Set OPENROUTER_API_KEY in your environment. Without it, a simple offline
-  # fallback is used so --skip-generate previews still work.
   provider: "openrouter"
   base_url: "https://openrouter.ai/api/v1"
-  model: "z-ai/glm-5.2"            # any model id served by OpenRouter
+  model: "z-ai/glm-5.2"
   api_key_env: "OPENROUTER_API_KEY"
-  temperature: 0.8                    # higher = more creative scene depictions
-  concurrency: 8                      # parallel LLM calls for scene prompts
-  build_bible: true                   # build a character/visual bible first
+  temperature: 0.8
+  concurrency: 8
+  build_bible: true
 
 generator:
-  num_inference_steps: 4         # Lower = faster, less detail. 4 is good for MS Paint.
-  sync_mode: "sync"              # "sync" or "async" — sync is simpler for small batches
-  image_size: "landscape_16_9"   # landscape_16_9, square_hd, portrait_16_9, etc.
+  image_size: "landscape_16_9"
+  output_format: "png"
+  enable_prompt_expansion: true      # krea-2/turbo: LLM expands prompts for better quality
 
-video:                           # Future: video assembly settings
+reviewer:
+  min_score: 3                       # Minimum overall score to pass (1-5)
+  max_retries: 2                     # Max regeneration attempts per image
+  # model: "google/gemini-2.0-flash" # Optional: override LLM model for review (needs vision)
+
+video:
   fps: 30
   transition: "fade"
   transition_duration: 0.3

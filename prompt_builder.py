@@ -52,16 +52,19 @@ def _style_block(style_config: Dict) -> str:
 # ─── Story bible ─────────────────────────────────────────────────────────────
 
 BIBLE_SYSTEM = (
-    "You are a visual director for an illustrated story. Read the full script "
-    "and produce a compact CHARACTER & VISUAL BIBLE that will keep every "
-    "character looking identical across many scenes. Return ONLY valid JSON, "
-    "no prose, no markdown fences. Schema:\n"
+    "You are a visual director for an illustrated story video (YouTube, 16:9). "
+    "Read the full script and produce a compact CHARACTER & VISUAL BIBLE that "
+    "will keep every character looking identical across many scenes. "
+    "Think about what makes each character instantly recognizable at a glance — "
+    "distinct silhouette, color, proportions, and one or two signature features. "
+    "Return ONLY valid JSON, no prose, no markdown fences. Schema:\n"
     "{\n"
-    '  "theme": "one sentence describing the overall visual mood/palette",\n'
-    '  "palette": "dominant colors and tone",\n'
+    '  "theme": "one sentence describing the overall visual mood, atmosphere and palette",\n'
+    '  "palette": "dominant colors, lighting style, and tonal range",\n'
     '  "characters": [\n'
-    '    {"name": "...", "description": "fixed appearance: species, size, colors, '
-    'proportions, distinguishing features", "role": "protagonist | supporting"}\n'
+    '    {"name": "...", "description": "fixed appearance: species, body shape, '
+    'exact colors, size relative to frame, distinguishing features, clothing/accessories", '
+    '"role": "protagonist | supporting"}\n'
     "  ]\n"
     "}"
 )
@@ -132,13 +135,22 @@ def _bible_block(bible: Dict) -> str:
 # ─── Per-scene prompts ───────────────────────────────────────────────────────
 
 SCENE_SYSTEM = (
-    "You write image-generation prompts for a single illustrated scene. "
+    "You write image-generation prompts for illustrated story videos (YouTube, 16:9 landscape). "
     "Given a character/visual bible, a style, and one line of narration, "
-    "write a vivid, concrete VISUAL DEPICTION of that exact moment — what is "
-    "on screen, who is there, what they are doing, body language, expression, "
-    "lighting, and setting. Do NOT repeat the narration verbatim; translate "
-    "it into imagery. Keep every character's appearance pinned to the bible "
-    "so they look identical across scenes. Bake the style in fully. "
+    "write a vivid, concrete VISUAL DEPICTION of that exact moment.\n\n"
+    "Your prompt MUST include:\n"
+    "- COMPOSITION: where characters are placed in frame (rule of thirds, centered, etc.), "
+    "foreground/background elements, depth\n"
+    "- CAMERA: angle and distance (wide shot, medium close-up, low angle, bird's eye, etc.)\n"
+    "- MOOD & LIGHTING: time of day, light direction, color temperature, atmosphere "
+    "(warm glow, cold blue, golden hour, dramatic shadows, soft diffused light)\n"
+    "- ACTION & EXPRESSION: what each character is doing, body language, facial expression, "
+    "eye direction, posture\n"
+    "- ENVIRONMENT: setting details, props, weather, background elements that support the story\n"
+    "- EMOTIONAL BEAT: what feeling this frame should evoke in the viewer\n\n"
+    "Do NOT repeat the narration verbatim; translate it into rich imagery. "
+    "Keep every character's appearance pinned to the bible so they look identical across scenes. "
+    "Bake the style in fully. Think like a storyboard artist for animation. "
     "Output ONLY the prompt text — no labels, no preface, no markdown."
 )
 
@@ -157,16 +169,47 @@ def _build_scene_prompt(
         _style_block(style_config),
         f"\nBIBLE:\n{_bible_block(bible)}" if _bible_block(bible) else "",
         f"\nSCENE POSITION: segment {idx + 1} of {total}.",
+        "FORMAT: 16:9 landscape (YouTube video frame).",
     ]
     if prev_segments:
         prev_lines = [f"- {p['text']}" for p in prev_segments]
         user_parts.append("\nIMMEDIATELY BEFORE THIS SCENE:\n" + "\n".join(prev_lines))
     user_parts.append(
         f"\nTHIS SCENE'S NARRATION: {segment['text']}\n\n"
-        "Write the image prompt for THIS scene only."
+        "Write the image prompt for THIS scene only. Make it cinematic and engaging."
     )
     user = "\n".join(p for p in user_parts if p)
     return llm.chat(SCENE_SYSTEM, user)
+
+
+REFINE_SYSTEM = (
+    "You are refining an image-generation prompt that produced a disappointing result. "
+    "You will receive the original prompt, the reviewer's feedback about what went wrong, "
+    "and the style/character bible. Rewrite the prompt to address the feedback while "
+    "keeping the same scene content. Make it more specific and vivid. "
+    "Output ONLY the improved prompt text — no labels, no preface, no markdown."
+)
+
+
+def refine_scene_prompt(
+    original_prompt: str,
+    feedback: str,
+    bible: Dict,
+    style_config: Dict,
+    segment: Dict,
+    llm: LLMClient,
+) -> str:
+    """Call the LLM to refine a prompt based on reviewer feedback."""
+    user = (
+        f"{_style_block(style_config)}\n\n"
+        f"BIBLE:\n{_bible_block(bible)}\n\n"
+        f"ORIGINAL PROMPT:\n{original_prompt}\n\n"
+        f"REVIEWER FEEDBACK:\n{feedback}\n\n"
+        f"SCENE NARRATION: {segment['text']}\n\n"
+        "Rewrite the prompt to fix the issues. Be more specific about composition, "
+        "lighting, and character placement."
+    )
+    return llm.chat(REFINE_SYSTEM, user)
 
 
 # ─── Offline fallback (no API key / --no-llm) ───────────────────────────────

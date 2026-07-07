@@ -3,8 +3,9 @@
 ## Overview
 
 This pipeline converts a timestamped script into a sequence of images, one per
-timestamp, using the FAL API (fal-ai/flux/schnell by default). The visual style
-is fully configurable via YAML templates. Each story gets its own folder.
+timestamp, using the FAL API (fal-ai/krea-2/turbo by default). A vision LLM
+reviews each image and can trigger prompt refinement + regeneration. The visual
+style is fully configurable via YAML templates. Each story gets its own folder.
 
 ## Quick Start
 
@@ -16,7 +17,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Run the full pipeline with the example script
-python pipeline.py --script scripts/input.txt --story puppy-duck --style ms_paint
+python pipeline.py --script scripts/input.txt --story puppy-duck --style storybook
 
 # Output goes to: output/puppy-duck/
 ```
@@ -49,7 +50,16 @@ python pipeline.py --script scripts/input.txt --story puppy-duck --style ms_pain
 ┌──────────────────────────────────────────────────┐
 │  3. generator.py                                   │
 │     Calls FAL API in parallel for all prompts      │
-│     Saves JPEGs + output/<story>/manifest.json     │
+│     Saves PNGs + output/<story>/manifest.json      │
+└────────────────────┬─────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  3.5. reviewer.py                                  │
+│     Vision LLM scores each image (1-5)             │
+│     Low scores → refine prompt → regenerate        │
+│     Max 2 retries per image                        │
+│     Output: output/<story>/review_report.json      │
 └────────────────────┬─────────────────────────────┘
                      │
                      ▼
@@ -78,6 +88,12 @@ python pipeline.py --script scripts/input.txt --story my-story --concurrency 4
 
 # Prompts only (no API call — preview what would be generated)
 python pipeline.py --script scripts/input.txt --story my-story --skip-generate
+
+# Skip the review stage
+python pipeline.py --script scripts/input.txt --story my-story --skip-review
+
+# Stricter review (higher minimum score, more retries)
+python pipeline.py --script scripts/input.txt --story my-story --min-score 4 --max-retries 3
 
 # Custom base output directory
 python pipeline.py --script scripts/input.txt --story my-story --output-dir ./my-projects
@@ -109,6 +125,7 @@ Edit or add templates in `styles/`:
 
 | Style | File | Description |
 |-------|------|-------------|
+| storybook | `styles/storybook.yaml` | Warm watercolor storybook illustrations (default) |
 | ms_paint | `styles/ms_paint.yaml` | Stick figures, thick lines, MS Paint look |
 | realistic | `styles/realistic.yaml` | Photorealistic cinematic images |
 | anime | `styles/anime.yaml` | Anime cel-shaded style |
@@ -124,8 +141,10 @@ See `config.yaml` for all settings:
 - `pipeline.concurrency` — parallel image generation count
 - `prompt_builder.model` — OpenRouter model id for scene-prompt generation
 - `prompt_builder.concurrency` — parallel LLM calls for scene prompts
-- `generator.num_inference_steps` — quality/speed tradeoff
 - `generator.image_size` — aspect ratio (landscape_16_9, square_hd, etc.)
+- `generator.enable_prompt_expansion` — krea-2/turbo: LLM expands prompts
+- `reviewer.min_score` — minimum review score to pass (1-5)
+- `reviewer.max_retries` — max regeneration attempts per image
 
 ## Output Structure
 
@@ -134,10 +153,12 @@ output/
 └── <story-name>/
     ├── segments.json        # Parsed script segments
     ├── prompts.json         # Final prompts sent to the API
+    ├── story_bible.json     # Character & visual bible
     ├── manifest.json        # Timestamp → image file mapping
+    ├── review_report.json   # Review scores and feedback
     ├── images/
-    │   ├── 000_00-00-00.jpg
-    │   ├── 001_00-00-02.jpg
+    │   ├── 000_00-00-00.png
+    │   ├── 001_00-00-02.png
     │   └── ...
     └── video/               # [Future]
         └── final.mp4

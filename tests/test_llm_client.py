@@ -91,3 +91,28 @@ def test_chat_retries_on_transient_error(monkeypatch):
 
     assert client.chat("s", "u") == "ok"
     assert mock.chat.completions.create.call_count == 2
+
+
+def test_chat_with_image_returns_content(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "key")
+    client = LLMClient()
+
+    mock = MagicMock()
+    mock.chat.completions.create.return_value = _fake_response("nice image")
+    client._client = mock
+
+    result = client.chat_with_image("sys", "describe this", "https://example.com/img.png")
+    assert result == "nice image"
+    kwargs = mock.chat.completions.create.call_args.kwargs
+    user_msg = kwargs["messages"][1]
+    assert user_msg["role"] == "user"
+    assert isinstance(user_msg["content"], list)
+    assert user_msg["content"][0]["type"] == "text"
+    assert user_msg["content"][1]["type"] == "image_url"
+
+
+def test_chat_with_image_raises_without_key(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    client = LLMClient()
+    with pytest.raises(RuntimeError):
+        client.chat_with_image("s", "u", "https://example.com/img.png")

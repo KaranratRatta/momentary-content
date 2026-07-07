@@ -1,0 +1,19 @@
+base_prompt: >
+  Warm, inviting children's storybook illustration style. Soft watercolor textures
+  with gentle hand-painted edges. Rich but muted color palette with warm undertones.
+  Soft diffused lighting with gentle shadows. Cozy, whimsical atmosphere.
+  Characters have rounded friendly proportions with expressive but simple faces.
+  Backgrounds are painterly with soft depth-of-field blur. No harsh lines.
+  No photorealism. No 3D rendering. Pure illustration aesthetic.
+  Each frame should feel like a page from a beloved picture book.
+
+character_rules:
+  - Characters have rounded, friendly proportions (big heads, soft bodies)
+  - Simple but expressive faces (large eyes, clear emotions)
+  - Animals have slightly anthropomorphic poses but natural coloring
+  - Consistent color palette per character across all scenes
+  - Soft fur/feather texture suggested with gentle brush strokes
+  - Characters should be clearly visible against the background
+  - Never draw humans unless the story explicitly mentions them
+
+image_size: landscape_16_9

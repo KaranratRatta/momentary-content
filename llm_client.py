@@ -91,3 +91,38 @@ class LLMClient:
                 time.sleep(2 ** attempt)
 
         raise RuntimeError(f"LLM call failed after {self.max_retries} retries: {last_err}")
+
+    def chat_with_image(self, system: str, user_text: str, image_url: str) -> str:
+        """
+        Send a chat completion with an image (vision). Returns assistant text.
+        Uses the same retry logic as chat().
+        """
+        if self._client is None:
+            raise RuntimeError(
+                "LLMClient has no API key set — cannot make an LLM call."
+            )
+
+        last_err: Optional[Exception] = None
+        for attempt in range(self.max_retries):
+            try:
+                resp = self._client.chat.completions.create(
+                    model=self.model,
+                    temperature=self.temperature,
+                    messages=[
+                        {"role": "system", "content": system},
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": user_text},
+                                {"type": "image_url", "image_url": {"url": image_url}},
+                            ],
+                        },
+                    ],
+                )
+                content = resp.choices[0].message.content
+                return (content or "").strip()
+            except Exception as e:
+                last_err = e
+                time.sleep(2 ** attempt)
+
+        raise RuntimeError(f"Vision LLM call failed after {self.max_retries} retries: {last_err}")

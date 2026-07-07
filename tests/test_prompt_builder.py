@@ -181,3 +181,56 @@ def test_build_all_prompts_llm_unavailable_falls_back(tmp_path):
     )
     # Falls back to deterministic prompts, not LLM calls.
     assert all("MS Paint style" in r["prompt"] for r in results)
+
+
+# ─── refine_scene_prompt ──────────────────────────────────────────────────────
+
+class FakeRefineLLM:
+    def __init__(self):
+        self.calls = 0
+
+    def is_available(self):
+        return True
+
+    def chat(self, system, user):
+        self.calls += 1
+        return "Improved prompt with better composition and lighting."
+
+
+def test_refine_scene_prompt_returns_improved_prompt():
+    llm = FakeRefineLLM()
+    result = pb.refine_scene_prompt(
+        original_prompt="A puppy stands alone.",
+        feedback="Character is too small, add warm lighting.",
+        bible={"theme": "friendship", "palette": "warm", "characters": []},
+        style_config=STYLE,
+        segment=SEGMENTS[0],
+        llm=llm,
+    )
+    assert llm.calls == 1
+    assert "Improved prompt" in result
+
+
+def test_refine_scene_prompt_includes_feedback_in_request():
+    class CapturingLLM:
+        def __init__(self):
+            self.last_user = ""
+
+        def is_available(self):
+            return True
+
+        def chat(self, system, user):
+            self.last_user = user
+            return "refined"
+
+    llm = CapturingLLM()
+    pb.refine_scene_prompt(
+        original_prompt="original",
+        feedback="add more detail to background",
+        bible={},
+        style_config=STYLE,
+        segment=SEGMENTS[0],
+        llm=llm,
+    )
+    assert "add more detail to background" in llm.last_user
+    assert "original" in llm.last_user

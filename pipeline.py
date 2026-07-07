@@ -5,13 +5,13 @@ Runs the full pipeline:
   1. Parse script → segments
   2. Build prompts from segments + style template
   3. Generate images via FAL API
-  4. [Future] Assemble video
+  4. Review images with vision LLM (refine + regenerate if needed)
+  5. [Future] Assemble video
 
 Usage:
-    python pipeline.py --script scripts/input.txt --style ms_paint
-    python pipeline.py --script scripts/input.txt --story my-story --style realistic
-    python pipeline.py --script scripts/input.txt --story my-story --style anime --concurrency 4
-    python pipeline.py --script scripts/input.txt --style anime --skip-generate  # prompts only
+    python pipeline.py --script scripts/input.txt --story my-story --style storybook
+    python pipeline.py --script scripts/input.txt --style storybook --skip-review
+    python pipeline.py --script scripts/input.txt --style anime --skip-generate
 """
 
 import argparse
@@ -26,9 +26,9 @@ from parser import parse_script
 from prompt_builder import build_all_prompts
 from llm_client import LLMClient
 from generator import generate_images
+from reviewer import review_and_refine
 from video_assembler import assemble_video
 
-# Load API keys from .env (FAL_KEY, OPENROUTER_API_KEY) if present.
 load_dotenv()
 
 
@@ -41,7 +41,6 @@ def load_style(style_name: str, config: dict) -> dict:
     """Load a style template by name."""
     style_path = Path(config.get("pipeline", {}).get("style_dir", "styles")) / f"{style_name}.yaml"
     if not style_path.exists():
-        # Check if it's in the current directory
         style_path = Path(f"styles/{style_name}.yaml")
     return yaml.safe_load(style_path.read_text())
 
@@ -49,12 +48,15 @@ def load_style(style_name: str, config: dict) -> dict:
 def run_pipeline(
     script_path: str,
     story_name: str = "untitled",
-    style_name: str = "ms_paint",
+    style_name: str = "storybook",
     concurrency: Optional[int] = None,
     output_dir: Optional[str] = None,
     skip_generate: bool = False,
+    skip_review: bool = False,
     skip_video: bool = True,
     config_path: str = "config.yaml",
+    min_score: int = 3,
+    max_retries: int = 2,
 ) -> dict:
     """Run the full pipeline end-to-end."""
 
@@ -63,6 +65,7 @@ def run_pipeline(
     parser_cfg = config.get("parser", {})
     prompt_cfg = config.get("prompt_builder", {})
     generator_cfg = config.get("generator", {})
+    reviewer_cfg = config.get("reviewer", {})
     video_cfg = config.get("video", {})
 
     style_config = load_style(style_name, config)
@@ -87,7 +90,6 @@ def run_pipeline(
 
     print(f"   Found {len(segments)} timestamped segments")
 
-    # Save intermediate
     seg_path = Path(output_dir) / "segments.json"
     seg_path.write_text(json.dumps([{k: v for k, v in s.items() if k != "prompt"} for s in segments], indent=2))
     print(f"   Saved: {seg_path}")
@@ -117,19 +119,56 @@ def run_pipeline(
 
     # ── Stage 3: Generate images ───────────────────────────────────────────
     print(f"\n🎨 Stage 3: Generating images...")
+    model = pipeline_cfg.get("model", "fal-ai/krea-2/turbo")
     gen_params = {
         "image_size": style_config.get("image_size", generator_cfg.get("image_size", "landscape_16_9")),
-        "num_inference_steps": style_config.get("num_inference_steps", generator_cfg.get("num_inference_steps", 4)),
-        "sync_mode": generator_cfg.get("sync_mode", "sync"),
+        "output_format": generator_cfg.get("output_format", "png"),
     }
+    if "num_inference_steps" in generator_cfg:
+        gen_params["num_inference_steps"] = style_config.get(
+            "num_inference_steps", generator_cfg["num_inference_steps"]
+        )
+    if "enable_prompt_expansion" in generator_cfg:
+        gen_params["enable_prompt_expansion"] = generator_cfg["enable_prompt_expansion"]
 
     segments = generate_images(
         segments=segments,
         output_dir=output_dir,
-        model=pipeline_cfg.get("model", "fal-ai/flux/schnell"),
+        model=model,
         concurrency=concurrency,
         params=gen_params,
     )
+
+    # ── Stage 3.5: Review ─────────────────────────────────────────────────
+    if not skip_review and llm.is_available():
+        print(f"\n🔍 Stage 3.5: Reviewing images...")
+        bible = {}
+        if Path(bible_path).exists():
+            try:
+                bible = json.loads(Path(bible_path).read_text())
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        review_llm = llm
+        review_model = reviewer_cfg.get("model", prompt_cfg.get("model"))
+        if review_model and review_model != prompt_cfg.get("model"):
+            review_llm = LLMClient.from_config({**prompt_cfg, "model": review_model})
+
+        segments = review_and_refine(
+            segments=segments,
+            bible=bible,
+            style_config=style_config,
+            llm=review_llm,
+            model=model,
+            gen_params=gen_params,
+            min_score=min_score,
+            max_retries=max_retries,
+            output_dir=output_dir,
+        )
+
+        prompts_path.write_text(json.dumps(segments, indent=2))
+    elif not skip_review:
+        print(f"\n⏭  Review skipped (no LLM available)")
 
     # ── Stage 4: Video [Future] ────────────────────────────────────────────
     if not skip_video:
@@ -160,18 +199,21 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python pipeline.py --script scripts/input.txt
-  python pipeline.py --script scripts/input.txt --style realistic
-  python pipeline.py --script scripts/input.txt --style ms_paint --concurrency 4
+  python pipeline.py --script scripts/input.txt --story puppy-duck --style storybook
+  python pipeline.py --script scripts/input.txt --style storybook --skip-review
   python pipeline.py --script scripts/input.txt --style anime --skip-generate
+  python pipeline.py --script scripts/input.txt --style storybook --min-score 4
         """,
     )
     parser.add_argument("--script", required=True, help="Path to script file with timestamps")
     parser.add_argument("--story", default="untitled", help="Story name (creates output/<story>/ folder)")
-    parser.add_argument("--style", default="ms_paint", help="Style template name (ms_paint, realistic, anime)")
+    parser.add_argument("--style", default="storybook", help="Style template name (storybook, ms_paint, realistic, anime)")
     parser.add_argument("--concurrency", type=int, default=None, help="Parallel image generations")
     parser.add_argument("--output-dir", default=None, help="Base output directory (default: ./output)")
     parser.add_argument("--skip-generate", action="store_true", help="Only build prompts, skip image gen")
+    parser.add_argument("--skip-review", action="store_true", help="Skip the image review stage")
+    parser.add_argument("--min-score", type=int, default=3, help="Minimum review score to pass (1-5)")
+    parser.add_argument("--max-retries", type=int, default=2, help="Max regeneration attempts per image")
     parser.add_argument("--config", default="config.yaml", help="Path to config file")
 
     args = parser.parse_args()
@@ -182,5 +224,8 @@ Examples:
         concurrency=args.concurrency,
         output_dir=args.output_dir,
         skip_generate=args.skip_generate,
+        skip_review=args.skip_review,
         config_path=args.config,
+        min_score=args.min_score,
+        max_retries=args.max_retries,
     )
