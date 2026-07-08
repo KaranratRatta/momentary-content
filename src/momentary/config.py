@@ -23,6 +23,7 @@ OPENROUTER_MODELS = [
 ]
 
 FAL_IMAGE_MODELS = [
+    "fal-ai/krea-2/turbo",
     "fal-ai/flux/schnell",
     "fal-ai/flux-pro",
     "fal-ai/flux-realism",
@@ -30,6 +31,7 @@ FAL_IMAGE_MODELS = [
 ]
 
 ELEVENLABS_MODELS = [
+    "eleven_v3",
     "eleven_multilingual_v2",
     "eleven_multilingual_v1",
     "eleven_english_v2",
