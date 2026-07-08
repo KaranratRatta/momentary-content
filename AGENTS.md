@@ -8,28 +8,35 @@ Automated video generation system that creates cartoon stick-figure educational 
 
 ## Tech Stack
 
-- **Language**: Python 3.12+
+- **Language**: Python 3.10+
+- **Package Manager**: uv + pyproject.toml
 - **Script Generation**: OpenRouter (OpenAI-compatible API)
 - **Image Generation**: Fal.ai (FLUX models)
 - **Voice Generation**: ElevenLabs TTS
-- **Video Assembly**: MoviePy + Pillow + NumPy
-- **Package Management**: pip + requirements.txt
+- **Video Assembly**: MoviePy 2.x + Pillow + NumPy
+- **CLI**: Typer + Rich
+- **UI**: Streamlit
 
 ## Project Structure
 
 ```
 momentary-content/
-├── main.py                 # CLI entry point (argparse)
-├── config.py               # All configuration, API keys, constants
-├── script_generator.py     # OpenRouter → JSON script
-├── image_generator.py      # Fal.ai → PNG images
-├── voice_generator.py      # ElevenLabs → MP3 audio
-── video_assembler.py      # MoviePy → MP4 video
-├── requirements.txt        # Dependencies
-├── .env                    # API keys (gitignored)
-├── .env.example            # Template
-├── output/                 # Final videos
-└── temp/                   # Intermediate files
+├── pyproject.toml          # uv project configuration
+├── src/
+│   └── momentary/
+│       ├── __init__.py
+│       ├── cli.py              # CLI with subcommands (typer)
+│       ├── config.py           # All configuration, API keys, constants
+│       ├── script_generator.py # OpenRouter → JSON script
+│       ├── image_generator.py  # Fal.ai → PNG images
+│       ├── voice_generator.py  # ElevenLabs → MP3 audio
+│       └── video_assembler.py  # MoviePy → MP4 video
+├── ui/
+│   └── app.py                  # Streamlit web interface
+├── .env                        # API keys (gitignored)
+├── .env.example                # Template
+├── output/                     # Final videos
+└── temp/                       # Intermediate files
 ```
 
 ## Code Conventions
@@ -41,15 +48,37 @@ momentary-content/
 - Keep functions focused and single-purpose
 - Import order: standard library → third-party → local
 
+### Package Structure
+- All code lives in `src/momentary/`
+- Use `from momentary.xxx import yyy` for internal imports
+- CLI commands in `cli.py` using Typer decorators
+
 ### Error Handling
 - Let API errors propagate with clear messages
-- Use `os.makedirs(..., exist_ok=True)` for directory creation
-- Validate API keys at startup in `main.py`
+- Use `Path.mkdir(parents=True, exist_ok=True)` for directory creation
+- Validate API keys at startup in CLI commands
 
 ### Configuration
 - All settings in `config.py`
 - API keys loaded from `.env` via `python-dotenv`
 - Never hardcode API keys
+- Placeholder detection: check for "your-key" in values
+
+## CLI Commands
+
+```bash
+# Full pipeline
+uv run momentary generate "Topic"
+
+# Component testing
+uv run momentary script "Topic"
+uv run momentary image "Prompt"
+uv run momentary voice "Text"
+uv run momentary assemble -t "Title"
+
+# Status check
+uv run momentary status
+```
 
 ## Key Design Decisions
 
@@ -69,14 +98,17 @@ Each scene's video duration matches its audio clip duration exactly. Audio is ge
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Configure API keys
 cp .env.example .env
 # Edit .env
 
 # Generate a video
-python main.py "Your Topic Here"
+uv run momentary generate "Your Topic Here"
+
+# Launch UI
+uv run streamlit run ui/app.py
 ```
 
 ## Adding New Features
@@ -95,10 +127,17 @@ Change `NUM_SCENES` in `config.py`.
 
 ## Testing
 
-No formal test suite exists. Manual testing:
+No formal test suite exists. Manual testing via CLI:
 
 ```bash
-python main.py "Test topic"
+# Test each component separately
+uv run momentary script "Test topic"
+uv run momentary image "Test prompt"
+uv run momentary voice "Test text"
+uv run momentary assemble -t "Test"
+
+# Full pipeline
+uv run momentary generate "Test topic"
 ```
 
 Verify:
@@ -119,3 +158,6 @@ Verify:
 | `numpy` | Math for zoom/pan calculations |
 | `python-dotenv` | Environment variable loading |
 | `requests` | HTTP downloads for images |
+| `typer` | CLI framework |
+| `rich` | Terminal formatting |
+| `streamlit` | Web UI framework |

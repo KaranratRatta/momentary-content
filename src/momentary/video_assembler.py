@@ -1,15 +1,13 @@
-import os
 import random
 import numpy as np
 from PIL import Image
-from moviepy.editor import (
+from pathlib import Path
+from moviepy import (
     ImageClip,
     AudioFileClip,
-    CompositeVideoClip,
     concatenate_videoclips,
-    ColorClip,
 )
-from config import (
+from momentary.config import (
     VIDEO_WIDTH,
     VIDEO_HEIGHT,
     FPS,
@@ -25,7 +23,7 @@ def get_audio_duration(audio_path: str) -> float:
     return duration
 
 
-def apply_ken_burns(image_path: str, duration: float, scene_index: int) -> ImageClip:
+def apply_ken_burns(image_path: str, duration: float) -> ImageClip:
     img = Image.open(image_path)
     img_array = np.array(img)
 
@@ -96,7 +94,6 @@ def add_crossfade(clips: list) -> list:
     for i, clip in enumerate(clips):
         if i < len(clips) - 1:
             fade_out_duration = min(TRANSITION_DURATION, clip.duration * 0.3)
-            clip = clip.with_effects([]) if hasattr(clip, 'with_effects') else clip
             try:
                 clip = clip.crossfadeout(fade_out_duration)
             except (AttributeError, TypeError):
@@ -119,7 +116,7 @@ def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
         audio_duration = get_audio_duration(audio_path)
         print(f"    Scene {i + 1}: {audio_duration:.1f}s audio, applying Ken Burns...")
 
-        video_clip = apply_ken_burns(img_path, audio_duration, i)
+        video_clip = apply_ken_burns(img_path, audio_duration)
         audio_clip = AudioFileClip(audio_path)
 
         video_clip = video_clip.with_audio(audio_clip)
@@ -131,17 +128,17 @@ def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
     print("  Concatenating scenes...")
     final = concatenate_videoclips(clips, method="compose", padding=-TRANSITION_DURATION)
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in title)
-    output_path = os.path.join(OUTPUT_DIR, f"{safe_title}.mp4")
+    output_path = OUTPUT_DIR / f"{safe_title}.mp4"
 
     print(f"  Exporting to {output_path}...")
     final.write_videofile(
-        output_path,
+        str(output_path),
         fps=FPS,
         codec="libx264",
         audio_codec="aac",
-        temp_audiofile=os.path.join(OUTPUT_DIR, "temp-audio.m4a"),
+        temp_audiofile=str(OUTPUT_DIR / "temp-audio.m4a"),
         remove_temp=True,
         preset="medium",
         threads=4,
@@ -152,4 +149,4 @@ def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
         clip.close()
 
     print(f"  Video saved: {output_path}")
-    return output_path
+    return str(output_path)

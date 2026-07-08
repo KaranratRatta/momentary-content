@@ -1,7 +1,7 @@
-import os
 import requests
 import fal_client
-from config import FAL_KEY, FAL_IMAGE_MODEL, TEMP_IMAGES_DIR, CARTOON_STYLE_PROMPT, VIDEO_WIDTH, VIDEO_HEIGHT
+from pathlib import Path
+from momentary.config import FAL_IMAGE_MODEL, TEMP_IMAGES_DIR, CARTOON_STYLE_PROMPT, VIDEO_WIDTH, VIDEO_HEIGHT
 
 
 def generate_image(scene_prompt: str, scene_index: int) -> str:
@@ -24,17 +24,18 @@ def generate_image(scene_prompt: str, scene_index: int) -> str:
     else:
         raise ValueError(f"No image in Fal.ai response: {result}")
 
-    output_path = os.path.join(TEMP_IMAGES_DIR, f"scene_{scene_index:03d}.png")
+    output_path = TEMP_IMAGES_DIR / f"scene_{scene_index:03d}.png"
     response = requests.get(image_url)
     response.raise_for_status()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "wb") as f:
         f.write(response.content)
 
-    return output_path
+    return str(output_path)
 
 
 def generate_all_images(scenes: list) -> list:
-    os.makedirs(TEMP_IMAGES_DIR, exist_ok=True)
+    TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     image_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating image for scene {i + 1}/{len(scenes)}...")

@@ -1,6 +1,6 @@
 import json
 from openai import OpenAI
-from config import OPENROUTER_API_KEY, OPENROUTER_MODEL, NUM_SCENES
+from momentary.config import OPENROUTER_API_KEY, OPENROUTER_MODEL, NUM_SCENES
 
 SYSTEM_PROMPT = f"""You are a YouTube scriptwriter for a cartoon stick-figure educational channel.
 The channel uses simple hand-drawn cartoon illustrations with stick figure characters.

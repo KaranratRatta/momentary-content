@@ -1,6 +1,6 @@
-import os
+from pathlib import Path
 from elevenlabs import ElevenLabs
-from config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, TEMP_AUDIO_DIR
+from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, TEMP_AUDIO_DIR
 
 
 def generate_voice(narration: str, scene_index: int) -> str:
@@ -13,16 +13,17 @@ def generate_voice(narration: str, scene_index: int) -> str:
         output_format="mp3_44100_128",
     )
 
-    output_path = os.path.join(TEMP_AUDIO_DIR, f"scene_{scene_index:03d}.mp3")
+    output_path = TEMP_AUDIO_DIR / f"scene_{scene_index:03d}.mp3"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "wb") as f:
         for chunk in audio:
             f.write(chunk)
 
-    return output_path
+    return str(output_path)
 
 
 def generate_all_voices(scenes: list) -> list:
-    os.makedirs(TEMP_AUDIO_DIR, exist_ok=True)
+    TEMP_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     audio_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating voice for scene {i + 1}/{len(scenes)}...")

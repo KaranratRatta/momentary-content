@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,11 +20,11 @@ TRANSITION_DURATION = 0.5
 
 NUM_SCENES = 10
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-TEMP_DIR = os.path.join(BASE_DIR, "temp")
-TEMP_IMAGES_DIR = os.path.join(TEMP_DIR, "images")
-TEMP_AUDIO_DIR = os.path.join(TEMP_DIR, "audio")
+PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+OUTPUT_DIR = PROJECT_DIR / "output"
+TEMP_DIR = PROJECT_DIR / "temp"
+TEMP_IMAGES_DIR = TEMP_DIR / "images"
+TEMP_AUDIO_DIR = TEMP_DIR / "audio"
 
 CARTOON_STYLE_PROMPT = (
     "cartoon stick figure illustration style, "
