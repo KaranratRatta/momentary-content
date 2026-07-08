@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from openai import OpenAI
 from momentary.config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 
@@ -34,7 +35,7 @@ Return ONLY valid JSON in this format:
 Do not include any text outside the JSON object."""
 
 
-def generate_script(topic: str, num_scenes: int = 10, model: str | None = None) -> dict:
+def generate_script(topic: str, num_scenes: int = 10, model: str | None = None, run_dir: Path | None = None) -> dict:
     client = OpenAI(
         api_key=OPENROUTER_API_KEY,
         base_url="https://openrouter.ai/api/v1",
@@ -54,4 +55,10 @@ def generate_script(topic: str, num_scenes: int = 10, model: str | None = None) 
     )
 
     script = json.loads(response.choices[0].message.content)
+
+    if run_dir:
+        script_path = run_dir / "script.json"
+        with open(script_path, "w") as f:
+            json.dump(script, f, indent=2)
+
     return script

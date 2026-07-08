@@ -28,7 +28,7 @@ uv run streamlit run ui/app.py
 The `momentary` CLI supports individual component testing:
 
 ```bash
-# Full pipeline (default 2 min video)
+# Full pipeline (default 8 min video)
 uv run momentary generate "Your Topic"
 
 # Specify video duration
@@ -45,8 +45,8 @@ uv run momentary image "A stick figure in a cave with campfire"
 # Test voice generation only
 uv run momentary voice "This is a test narration"
 
-# Assemble video from existing temp files
-uv run momentary assemble -t "My Video"
+# Assemble video from a specific run
+uv run momentary assemble runs/your_topic_20260708_221500
 
 # Check system status
 uv run momentary status
@@ -59,6 +59,23 @@ The system calculates the number of scenes based on target duration:
 - Minimum: 3 scenes (0.5 min)
 - Maximum: 30 scenes (5+ min)
 - The LLM adjusts narration length to fit the target duration
+
+### Run Directory Structure
+
+Each generation creates a permanent run directory:
+
+```
+runs/
+├── what_did_ancient_humans_do_at_night_20260708_221500/
+│   ├── script.json          # Generated script
+│   ├── images/
+│   │   ├── scene_000.png
+│   │   └── scene_001.png
+│   ├── audio/
+│   │   ├── scene_000.mp3
+│   │   └── scene_001.mp3
+│   └── video.mp4            # Final video
+```
 
 ## Web UI
 
@@ -73,8 +90,9 @@ The UI provides tabs for:
 - **Test Script** - Test OpenRouter script generation
 - **Test Image** - Test Fal.ai image generation
 - **Test Voice** - Test ElevenLabs voice generation
-- **Test Assemble** - Assemble video from existing temp files
-- **Status** - Check API keys and generated files
+- **Test Assemble** - Assemble video from a specific run
+- **Runs** - Browse all runs with scripts, images, audio, and videos
+- **Status** - Check API keys and system status
 
 ## Architecture
 
@@ -123,9 +141,13 @@ momentary-content/
 │       └── video_assembler.py  # MoviePy video assembly
 ├── ui/
 │   └── app.py                  # Streamlit web interface
+├── runs/                       # Permanent run directories
+│   └── topic_timestamp/
+│       ├── script.json
+│       ├── images/
+│       ├── audio/
+│       └── video.mp4
 ├── .env.example                # API key template
-├── output/                     # Generated videos
-└── temp/                       # Intermediate files (images, audio)
 ```
 
 ## Configuration

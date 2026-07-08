@@ -7,11 +7,10 @@ from momentary.config import (
     OPENROUTER_API_KEY,
     FAL_KEY,
     ELEVENLABS_API_KEY,
-    TEMP_IMAGES_DIR,
-    TEMP_AUDIO_DIR,
-    OUTPUT_DIR,
+    RUNS_DIR,
     DEFAULT_DURATION_MINUTES,
     calculate_scenes,
+    create_run_directory,
     OPENROUTER_MODELS,
     FAL_IMAGE_MODELS,
     ELEVENLABS_MODELS,
@@ -71,23 +70,26 @@ def generate(
     if voice_model:
         console.print(f"  Voice Model: [bold]{voice_model}[/bold]")
 
+    run_dir = create_run_directory(topic)
+    console.print(f"  Run directory: [bold]{run_dir}[/bold]")
+
     console.print("\n[bold][1/4] Generating script...[/bold]")
-    script = generate_script(topic, num_scenes, model=llm_model)
+    script = generate_script(topic, num_scenes, model=llm_model, run_dir=run_dir)
     title = script.get("title", topic)
     scenes = script["scenes"]
     console.print(f"  Title: [bold]{title}[/bold]")
     console.print(f"  Scenes: {len(scenes)}")
 
     console.print("\n[bold][2/4] Generating images...[/bold]")
-    image_paths = generate_all_images(scenes, model=image_model)
+    image_paths = generate_all_images(scenes, model=image_model, run_dir=run_dir)
     console.print(f"  Generated {len(image_paths)} images")
 
     console.print("\n[bold][3/4] Generating voice narration...[/bold]")
-    audio_paths = generate_all_voices(scenes, model=voice_model)
+    audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
     console.print(f"  Generated {len(audio_paths)} audio clips")
 
     console.print("\n[bold][4/4] Assembling video...[/bold]")
-    output_path = assemble_video(image_paths, audio_paths, title)
+    output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
 
     console.print(Panel(f"[bold green]{output_path}[/bold green]", title="Video Complete!", border_style="green"))
 
@@ -106,16 +108,19 @@ def script(
     console.print(f"[bold]Generating script for:[/bold] {topic} ({num_scenes} scenes, ~{duration} min)")
     if model:
         console.print(f"  Model: [bold]{model}[/bold]")
-    result = generate_script(topic, num_scenes, model=model)
+
+    run_dir = create_run_directory(topic)
+    result = generate_script(topic, num_scenes, model=model, run_dir=run_dir)
 
     formatted = json.dumps(result, indent=2)
     console.print(Panel(formatted, title="Generated Script", border_style="blue"))
+    console.print(f"[green]Script saved to: {run_dir / 'script.json'}[/green]")
 
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
         with open(output, "w") as f:
             f.write(formatted)
-        console.print(f"[green]Saved to {output}[/green]")
+        console.print(f"[green]Also saved to {output}[/green]")
 
 
 @app.command()
@@ -153,17 +158,17 @@ def voice(
 
 @app.command()
 def assemble(
-    title: str = typer.Option("Untitled", "--title", "-t", help="Video title for filename"),
+    run_dir: Path = typer.Argument(help="Path to run directory"),
 ):
-    """Test video assembly from existing temp/images and temp/audio files."""
-    image_files = sorted(TEMP_IMAGES_DIR.glob("scene_*.png"))
-    audio_files = sorted(TEMP_AUDIO_DIR.glob("scene_*.mp3"))
+    """Assemble video from a specific run directory."""
+    image_files = sorted((run_dir / "images").glob("scene_*.png"))
+    audio_files = sorted((run_dir / "audio").glob("scene_*.mp3"))
 
     if not image_files:
-        console.print("[red]No images found in temp/images/[/red]")
+        console.print(f"[red]No images found in {run_dir / 'images'}[/red]")
         raise typer.Exit(1)
     if not audio_files:
-        console.print("[red]No audio files found in temp/audio/[/red]")
+        console.print(f"[red]No audio files found in {run_dir / 'audio'}[/red]")
         raise typer.Exit(1)
 
     if len(image_files) != len(audio_files):
@@ -172,14 +177,22 @@ def assemble(
     image_paths = [str(p) for p in image_files]
     audio_paths = [str(p) for p in audio_files]
 
+    script_path = run_dir / "script.json"
+    title = "Untitled"
+    if script_path.exists():
+        import json
+        with open(script_path) as f:
+            script = json.load(f)
+            title = script.get("title", "Untitled")
+
     console.print(f"[bold]Assembling video from {len(image_paths)} scenes...[/bold]")
-    output_path = assemble_video(image_paths, audio_paths, title)
+    output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
     console.print(Panel(f"[bold green]{output_path}[/bold green]", title="Video Complete!", border_style="green"))
 
 
 @app.command()
 def status():
-    """Check API key configuration and temp files."""
+    """Check API key configuration and runs."""
     console.print(Panel("API Key Status", border_style="cyan"))
 
     keys = {
@@ -195,15 +208,20 @@ def status():
         console.print(f"  {name}: {status}")
 
     console.print()
-    console.print(Panel("Temp Files", border_style="cyan"))
+    console.print(Panel("Runs", border_style="cyan"))
 
-    img_count = len(list(TEMP_IMAGES_DIR.glob("scene_*.png"))) if TEMP_IMAGES_DIR.exists() else 0
-    aud_count = len(list(TEMP_AUDIO_DIR.glob("scene_*.mp3"))) if TEMP_AUDIO_DIR.exists() else 0
-    out_count = len(list(OUTPUT_DIR.glob("*.mp4"))) if OUTPUT_DIR.exists() else 0
-
-    console.print(f"  Images: {img_count}")
-    console.print(f"  Audio:  {aud_count}")
-    console.print(f"  Videos: {out_count}")
+    if RUNS_DIR.exists():
+        runs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()])
+        console.print(f"  Total runs: {len(runs)}")
+        for run in runs[-5:]:
+            script_exists = (run / "script.json").exists()
+            img_count = len(list((run / "images").glob("scene_*.png"))) if (run / "images").exists() else 0
+            aud_count = len(list((run / "audio").glob("scene_*.mp3"))) if (run / "audio").exists() else 0
+            video_exists = (run / "video.mp4").exists()
+            console.print(f"  - {run.name}")
+            console.print(f"    Script: {'[green]Yes[/green]' if script_exists else '[red]No[/red]'} | Images: {img_count} | Audio: {aud_count} | Video: {'[green]Yes[/green]' if video_exists else '[red]No[/red]'}")
+    else:
+        console.print("  No runs yet")
 
 
 if __name__ == "__main__":

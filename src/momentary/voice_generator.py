@@ -1,9 +1,9 @@
 from pathlib import Path
 from elevenlabs import ElevenLabs
-from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL, TEMP_AUDIO_DIR
+from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL
 
 
-def generate_voice(narration: str, scene_index: int, model: str | None = None) -> str:
+def generate_voice(narration: str, scene_index: int, model: str | None = None, run_dir: Path | None = None) -> str:
     client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
     audio = client.text_to_speech.convert(
@@ -13,7 +13,12 @@ def generate_voice(narration: str, scene_index: int, model: str | None = None) -
         output_format="mp3_44100_128",
     )
 
-    output_path = TEMP_AUDIO_DIR / f"scene_{scene_index:03d}.mp3"
+    if run_dir:
+        audio_dir = run_dir / "audio"
+    else:
+        audio_dir = Path("temp/audio")
+
+    output_path = audio_dir / f"scene_{scene_index:03d}.mp3"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "wb") as f:
         for chunk in audio:
@@ -22,11 +27,16 @@ def generate_voice(narration: str, scene_index: int, model: str | None = None) -
     return str(output_path)
 
 
-def generate_all_voices(scenes: list, model: str | None = None) -> list:
-    TEMP_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+def generate_all_voices(scenes: list, model: str | None = None, run_dir: Path | None = None) -> list:
+    if run_dir:
+        audio_dir = run_dir / "audio"
+    else:
+        audio_dir = Path("temp/audio")
+
+    audio_dir.mkdir(parents=True, exist_ok=True)
     audio_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating voice for scene {i + 1}/{len(scenes)}...")
-        path = generate_voice(scene["narration"], i, model)
+        path = generate_voice(scene["narration"], i, model, run_dir)
         audio_paths.append(path)
     return audio_paths

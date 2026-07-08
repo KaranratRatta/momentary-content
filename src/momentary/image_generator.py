@@ -1,10 +1,10 @@
 import requests
 import fal_client
 from pathlib import Path
-from momentary.config import FAL_IMAGE_MODEL, TEMP_IMAGES_DIR, CARTOON_STYLE_PROMPT, VIDEO_WIDTH, VIDEO_HEIGHT
+from momentary.config import FAL_IMAGE_MODEL, CARTOON_STYLE_PROMPT, VIDEO_WIDTH, VIDEO_HEIGHT
 
 
-def generate_image(scene_prompt: str, scene_index: int, model: str | None = None) -> str:
+def generate_image(scene_prompt: str, scene_index: int, model: str | None = None, run_dir: Path | None = None) -> str:
     full_prompt = f"{scene_prompt}, {CARTOON_STYLE_PROMPT}"
 
     result = fal_client.subscribe(
@@ -12,7 +12,7 @@ def generate_image(scene_prompt: str, scene_index: int, model: str | None = None
         arguments={
             "prompt": full_prompt,
             "image_size": {"width": VIDEO_WIDTH, "height": VIDEO_HEIGHT},
-            "num_inference_steps": 4,
+            "num_inference_steps": 8,
             "num_images": 1,
         },
     )
@@ -24,7 +24,12 @@ def generate_image(scene_prompt: str, scene_index: int, model: str | None = None
     else:
         raise ValueError(f"No image in Fal.ai response: {result}")
 
-    output_path = TEMP_IMAGES_DIR / f"scene_{scene_index:03d}.png"
+    if run_dir:
+        images_dir = run_dir / "images"
+    else:
+        images_dir = Path("temp/images")
+
+    output_path = images_dir / f"scene_{scene_index:03d}.png"
     response = requests.get(image_url)
     response.raise_for_status()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,11 +39,16 @@ def generate_image(scene_prompt: str, scene_index: int, model: str | None = None
     return str(output_path)
 
 
-def generate_all_images(scenes: list, model: str | None = None) -> list:
-    TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+def generate_all_images(scenes: list, model: str | None = None, run_dir: Path | None = None) -> list:
+    if run_dir:
+        images_dir = run_dir / "images"
+    else:
+        images_dir = Path("temp/images")
+
+    images_dir.mkdir(parents=True, exist_ok=True)
     image_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating image for scene {i + 1}/{len(scenes)}...")
-        path = generate_image(scene["image_prompt"], i, model)
+        path = generate_image(scene["image_prompt"], i, model, run_dir)
         image_paths.append(path)
     return image_paths

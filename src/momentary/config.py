@@ -1,4 +1,6 @@
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -54,11 +56,26 @@ def calculate_scenes(duration_minutes: float) -> int:
     scenes = int(duration_seconds / AVG_SCENE_DURATION_SECONDS)
     return max(MIN_SCENES, min(MAX_SCENES, scenes))
 
+
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-OUTPUT_DIR = PROJECT_DIR / "output"
-TEMP_DIR = PROJECT_DIR / "temp"
-TEMP_IMAGES_DIR = TEMP_DIR / "images"
-TEMP_AUDIO_DIR = TEMP_DIR / "audio"
+RUNS_DIR = PROJECT_DIR / "runs"
+
+
+def sanitize_topic(topic: str) -> str:
+    sanitized = re.sub(r'[^\w\s-]', '', topic)
+    sanitized = re.sub(r'[\s_]+', '_', sanitized)
+    return sanitized.lower()[:50]
+
+
+def create_run_directory(topic: str) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = f"{sanitize_topic(topic)}_{timestamp}"
+    run_dir = RUNS_DIR / folder_name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "images").mkdir(exist_ok=True)
+    (run_dir / "audio").mkdir(exist_ok=True)
+    return run_dir
+
 
 CARTOON_STYLE_PROMPT = (
     "cartoon stick figure illustration style, "

@@ -33,10 +33,14 @@ momentary-content/
 │       └── video_assembler.py  # MoviePy → MP4 video
 ├── ui/
 │   └── app.py                  # Streamlit web interface
+├── runs/                       # Permanent run directories
+│   ── topic_timestamp/
+│       ├── script.json
+│       ├── images/
+│       ├── audio/
+│       └── video.mp4
 ├── .env                        # API keys (gitignored)
-├── .env.example                # Template
-├── output/                     # Final videos
-└── temp/                       # Intermediate files
+── .env.example                # Template
 ```
 
 ## Code Conventions
@@ -67,7 +71,7 @@ momentary-content/
 ## CLI Commands
 
 ```bash
-# Full pipeline (default 2 min)
+# Full pipeline (default 8 min)
 uv run momentary generate "Topic"
 
 # Custom duration
@@ -78,7 +82,9 @@ uv run momentary generate "Topic" -d 0.5      # 30 second video
 uv run momentary script "Topic" -d 3
 uv run momentary image "Prompt"
 uv run momentary voice "Text"
-uv run momentary assemble -t "Title"
+
+# Assemble from a specific run
+uv run momentary assemble runs/topic_timestamp
 
 # Status check
 uv run momentary status
@@ -145,17 +151,17 @@ No formal test suite exists. Manual testing via CLI:
 uv run momentary script "Test topic"
 uv run momentary image "Test prompt"
 uv run momentary voice "Test text"
-uv run momentary assemble -t "Test"
+uv run momentary assemble runs/test_topic_timestamp
 
 # Full pipeline
 uv run momentary generate "Test topic"
 ```
 
 Verify:
-1. Script generates valid JSON with correct number of scenes
-2. Images are 1920x1080 PNG files
-3. Audio clips are valid MP3 files
-4. Final video plays correctly with audio synced to images
+1. Script generates valid JSON with correct number of scenes and saves to `runs/`
+2. Images are 1920x1080 PNG files in `runs/{topic}/images/`
+3. Audio clips are valid MP3 files in `runs/{topic}/audio/`
+4. Final video plays correctly with audio synced to images in `runs/{topic}/video.mp4`
 
 ## Dependencies
 

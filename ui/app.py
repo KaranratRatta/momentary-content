@@ -9,11 +9,10 @@ from momentary.config import (
     OPENROUTER_API_KEY,
     FAL_KEY,
     ELEVENLABS_API_KEY,
-    TEMP_IMAGES_DIR,
-    TEMP_AUDIO_DIR,
-    OUTPUT_DIR,
+    RUNS_DIR,
     DEFAULT_DURATION_MINUTES,
     calculate_scenes,
+    create_run_directory,
     OPENROUTER_MODELS,
     FAL_IMAGE_MODELS,
     ELEVENLABS_MODELS,
@@ -227,8 +226,8 @@ if missing:
     st.stop()
 
 
-tab_pipeline, tab_script, tab_image, tab_voice, tab_assemble, tab_status = st.tabs(
-    ["Full Pipeline", "Test Script", "Test Image", "Test Voice", "Test Assemble", "Status"]
+tab_pipeline, tab_script, tab_image, tab_voice, tab_assemble, tab_runs, tab_status = st.tabs(
+    ["Full Pipeline", "Test Script", "Test Image", "Test Voice", "Test Assemble", "Runs", "Status"]
 )
 
 
@@ -253,22 +252,25 @@ with tab_pipeline:
         st.caption(f"Voice: {voice_model}")
 
     if st.button("Generate Video", type="primary", disabled=not topic):
+        run_dir = create_run_directory(topic)
+        st.info(f"Run directory: `{run_dir}`")
+
         with st.spinner("Generating script..."):
-            script = generate_script(topic, num_scenes, model=llm_model)
+            script = generate_script(topic, num_scenes, model=llm_model, run_dir=run_dir)
             title = script.get("title", topic)
             scenes = script["scenes"]
             st.success(f"Script: {title} ({len(scenes)} scenes)")
 
         with st.spinner("Generating images..."):
-            image_paths = generate_all_images(scenes, model=image_model)
+            image_paths = generate_all_images(scenes, model=image_model, run_dir=run_dir)
             st.success(f"Generated {len(image_paths)} images")
 
         with st.spinner("Generating voice narration..."):
-            audio_paths = generate_all_voices(scenes, model=voice_model)
+            audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
             st.success(f"Generated {len(audio_paths)} audio clips")
 
         with st.spinner("Assembling video..."):
-            output_path = assemble_video(image_paths, audio_paths, title)
+            output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
             st.success(f"Video saved: {output_path}")
 
             if Path(output_path).exists():
@@ -288,8 +290,10 @@ with tab_script:
     st.caption(f"~{num_scenes} scenes | Model: {llm_model}")
 
     if st.button("Generate Script", disabled=not topic):
+        run_dir = create_run_directory(topic)
         with st.spinner("Generating..."):
-            result = generate_script(topic, num_scenes, model=llm_model)
+            result = generate_script(topic, num_scenes, model=llm_model, run_dir=run_dir)
+            st.success(f"Script saved to: `{run_dir / 'script.json'}`")
             st.json(result)
 
             col1, col2 = st.columns(2)
@@ -337,30 +341,77 @@ with tab_voice:
 with tab_assemble:
     st.header("Test Video Assembly")
 
-    img_files = sorted(TEMP_IMAGES_DIR.glob("scene_*.png")) if TEMP_IMAGES_DIR.exists() else []
-    aud_files = sorted(TEMP_AUDIO_DIR.glob("scene_*.mp3")) if TEMP_AUDIO_DIR.exists() else []
+    if RUNS_DIR.exists():
+        runs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()], reverse=True)
+        run_options = [r.name for r in runs]
+        selected_run = st.selectbox("Select Run", options=run_options)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Images Available", len(img_files))
-    with col2:
-        st.metric("Audio Available", len(aud_files))
+        if selected_run:
+            run_dir = RUNS_DIR / selected_run
+            img_files = sorted((run_dir / "images").glob("scene_*.png"))
+            aud_files = sorted((run_dir / "audio").glob("scene_*.mp3"))
 
-    if not img_files:
-        st.warning("No images in temp/images/. Generate some first.")
-    if not aud_files:
-        st.warning("No audio in temp/audio/. Generate some first.")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Images Available", len(img_files))
+            with col2:
+                st.metric("Audio Available", len(aud_files))
 
-    title = st.text_input("Video Title", value="test_video")
+            if not img_files:
+                st.warning("No images in this run.")
+            if not aud_files:
+                st.warning("No audio in this run.")
 
-    if st.button("Assemble Video", disabled=not img_files or not aud_files):
-        image_paths = [str(p) for p in img_files]
-        audio_paths = [str(p) for p in aud_files]
+            if st.button("Assemble Video", disabled=not img_files or not aud_files):
+                image_paths = [str(p) for p in img_files]
+                audio_paths = [str(p) for p in aud_files]
 
-        with st.spinner("Assembling..."):
-            output_path = assemble_video(image_paths, audio_paths, title)
-            st.success(f"Video saved: {output_path}")
-            st.video(output_path)
+                script_path = run_dir / "script.json"
+                title = "Untitled"
+                if script_path.exists():
+                    with open(script_path) as f:
+                        script = json.load(f)
+                        title = script.get("title", "Untitled")
+
+                with st.spinner("Assembling..."):
+                    output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
+                    st.success(f"Video saved: {output_path}")
+                    st.video(output_path)
+    else:
+        st.info("No runs available. Generate a video first.")
+
+
+with tab_runs:
+    st.header("All Runs")
+
+    if RUNS_DIR.exists():
+        runs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()], reverse=True)
+        st.metric("Total Runs", len(runs))
+
+        for run in runs:
+            with st.expander(run.name):
+                script_path = run / "script.json"
+                img_count = len(list((run / "images").glob("scene_*.png"))) if (run / "images").exists() else 0
+                aud_count = len(list((run / "audio").glob("scene_*.mp3"))) if (run / "audio").exists() else 0
+                video_exists = (run / "video.mp4").exists()
+
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Script", "Yes" if script_path.exists() else "No")
+                col2.metric("Images", img_count)
+                col3.metric("Audio", aud_count)
+                col4.metric("Video", "Yes" if video_exists else "No")
+
+                if script_path.exists():
+                    with open(script_path) as f:
+                        script = json.load(f)
+                    st.subheader("Script")
+                    st.json(script)
+
+                if video_exists:
+                    st.subheader("Video")
+                    st.video(str(run / "video.mp4"))
+    else:
+        st.info("No runs yet. Generate a video to get started.")
 
 
 with tab_status:
@@ -391,20 +442,20 @@ with tab_status:
     with col3:
         st.metric("Voice", voice_model)
 
-    st.subheader("Files")
-    img_count = len(img_files) if TEMP_IMAGES_DIR.exists() else 0
-    aud_count = len(aud_files) if TEMP_AUDIO_DIR.exists() else 0
-    out_count = len(list(OUTPUT_DIR.glob("*.mp4"))) if OUTPUT_DIR.exists() else 0
+    st.subheader("Runs")
+    if RUNS_DIR.exists():
+        runs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()])
+        st.metric("Total Runs", len(runs))
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Images", img_count)
-    col2.metric("Audio Clips", aud_count)
-    col3.metric("Videos", out_count)
-
-    st.subheader("Generated Videos")
-    if OUTPUT_DIR.exists():
-        videos = list(OUTPUT_DIR.glob("*.mp4"))
-        for v in videos:
-            st.write(f"- {v.name}")
+        if runs:
+            st.subheader("Recent Runs")
+            for run in runs[-5:]:
+                script_exists = (run / "script.json").exists()
+                img_count = len(list((run / "images").glob("scene_*.png"))) if (run / "images").exists() else 0
+                aud_count = len(list((run / "audio").glob("scene_*.mp3"))) if (run / "audio").exists() else 0
+                video_exists = (run / "video.mp4").exists()
+                st.write(f"- **{run.name}**")
+                st.caption(f"Script: {'Yes' if script_exists else 'No'} | Images: {img_count} | Audio: {aud_count} | Video: {'Yes' if video_exists else 'No'}")
     else:
-        st.info("No videos generated yet.")
+        st.metric("Total Runs", 0)
+        st.info("No runs yet.")

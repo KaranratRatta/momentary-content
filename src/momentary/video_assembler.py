@@ -12,7 +12,6 @@ from momentary.config import (
     VIDEO_HEIGHT,
     FPS,
     TRANSITION_DURATION,
-    OUTPUT_DIR,
 )
 
 
@@ -108,7 +107,7 @@ def add_crossfade(clips: list) -> list:
     return result
 
 
-def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
+def assemble_video(image_paths: list, audio_paths: list, title: str, run_dir: Path | None = None) -> str:
     print("  Assembling video...")
 
     clips = []
@@ -128,9 +127,12 @@ def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
     print("  Concatenating scenes...")
     final = concatenate_videoclips(clips, method="compose", padding=-TRANSITION_DURATION)
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in title)
-    output_path = OUTPUT_DIR / f"{safe_title}.mp4"
+    if run_dir:
+        output_path = run_dir / "video.mp4"
+    else:
+        output_path = Path("output") / f"{title}.mp4"
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"  Exporting to {output_path}...")
     final.write_videofile(
@@ -138,7 +140,7 @@ def assemble_video(image_paths: list, audio_paths: list, title: str) -> str:
         fps=FPS,
         codec="libx264",
         audio_codec="aac",
-        temp_audiofile=str(OUTPUT_DIR / "temp-audio.m4a"),
+        temp_audiofile=str(output_path.parent / "temp-audio.m4a"),
         remove_temp=True,
         preset="medium",
         threads=4,
