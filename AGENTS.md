@@ -2,6 +2,10 @@
 
 This document provides instructions for AI agents working on the momentary-content project.
 
+## Important Rules
+
+- **Do NOT push code to git.** The user will push code themselves. Only commit locally if asked.
+
 ## Project Overview
 
 Automated video generation system that creates cartoon stick-figure educational videos from a topic.

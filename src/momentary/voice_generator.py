@@ -3,11 +3,11 @@ from elevenlabs import ElevenLabs
 from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL
 
 
-def generate_voice(narration: str, scene_index: int, model: str | None = None, run_dir: Path | None = None) -> str:
+def generate_voice(narration: str, scene_index: int, model: str | None = None, voice_id: str | None = None, run_dir: Path | None = None) -> str:
     client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
     audio = client.text_to_speech.convert(
-        voice_id=ELEVENLABS_VOICE_ID,
+        voice_id=voice_id or ELEVENLABS_VOICE_ID,
         text=narration,
         model_id=model or ELEVENLABS_MODEL,
         output_format="mp3_44100_128",
@@ -27,7 +27,7 @@ def generate_voice(narration: str, scene_index: int, model: str | None = None, r
     return str(output_path)
 
 
-def generate_all_voices(scenes: list, model: str | None = None, run_dir: Path | None = None) -> list:
+def generate_all_voices(scenes: list, model: str | None = None, voice_id: str | None = None, run_dir: Path | None = None) -> list:
     if run_dir:
         audio_dir = run_dir / "audio"
     else:
@@ -37,6 +37,6 @@ def generate_all_voices(scenes: list, model: str | None = None, run_dir: Path | 
     audio_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating voice for scene {i + 1}/{len(scenes)}...")
-        path = generate_voice(scene["narration"], i, model, run_dir)
+        path = generate_voice(scene["narration"], i, model, voice_id, run_dir)
         audio_paths.append(path)
     return audio_paths

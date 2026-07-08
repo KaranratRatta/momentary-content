@@ -16,6 +16,23 @@ FAL_IMAGE_MODEL = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux/schnell")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 ELEVENLABS_MODEL = os.getenv("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 
+ELEVENLABS_VOICES = {
+    "Rachel": "21m00Tcm4TlvDq8ikWAM",
+    "Drew": "29vD33N1CtxCmqQRPOHJ",
+    "Clyde": "2EiwWnXFnvU5JabPnv8n",
+    "Paul": "5Q0t7uMcjvnagumLfvZi",
+    "Domi": "AZnzlk1XvdvUeBnXmlld",
+    "Dave": "CYw3kZ02Hs0563khs1Fj",
+    "Freya": "D38z5RcWu1voky8WS1ja",
+    "Sarah": "EXAVITQu4vr4xnSDxMaL",
+    "Antoni": "ErXwobaYiN019PkySvjV",
+    "Elli": "MF3mGyEYCl7XYWbV9V6O",
+    "Josh": "TxGEqnHWrfWFTfGW9XjX",
+    "Arnold": "VR6AewLTigWG4xSOukaG",
+    "Adam": "pNInz6obpgDQGcFmaJgB",
+    "Sam": "yoZ06aMxZJJ28mfd3POQ",
+}
+
 OPENROUTER_MODELS = [
     "deepseek/deepseek-chat",
     "anthropic/claude-sonnet-4",
@@ -45,7 +62,7 @@ VIDEO_HEIGHT = 1080
 FPS = 30
 TRANSITION_DURATION = 0.5
 
-DEFAULT_DURATION_MINUTES = 8.0
+DEFAULT_DURATION_MINUTES = 0.5
 AVG_SCENE_DURATION_SECONDS = 8
 MIN_SCENES = 3
 MAX_SCENES = 30
@@ -91,3 +108,43 @@ CARTOON_STYLE_PROMPT = (
     "no photorealism, "
     "no 3D rendering"
 )
+
+ANIME_STYLE_PROMPT = (
+    "anime illustration style, "
+    "detailed anime character design with expressive eyes, "
+    "vibrant colors with cel shading, "
+    "dynamic composition with dramatic angles, "
+    "Japanese animation aesthetic, "
+    "clean line art with detailed backgrounds, "
+    "emotional lighting and atmosphere"
+)
+
+REALISTIC_STYLE_PROMPT = (
+    "photorealistic digital art, "
+    "highly detailed realistic rendering, "
+    "cinematic lighting and composition, "
+    "professional photography quality, "
+    "natural color palette, "
+    "detailed textures and materials, "
+    "dramatic mood lighting"
+)
+
+STORYBOOK_STYLE_PROMPT = (
+    "children's storybook illustration style, "
+    "whimsical hand-drawn artwork, "
+    "soft pastel color palette, "
+    "gentle rounded shapes and friendly characters, "
+    "warm cozy atmosphere, "
+    "textured paper-like background, "
+    "classic fairy tale aesthetic, "
+    "inviting and magical mood"
+)
+
+STYLE_PROMPTS = {
+    "Cartoon Stick Figure": CARTOON_STYLE_PROMPT,
+    "Anime": ANIME_STYLE_PROMPT,
+    "Realistic": REALISTIC_STYLE_PROMPT,
+    "Storybook": STORYBOOK_STYLE_PROMPT,
+}
+
+DEFAULT_STYLE = "Cartoon Stick Figure"

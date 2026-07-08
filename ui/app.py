@@ -16,9 +16,13 @@ from momentary.config import (
     OPENROUTER_MODELS,
     FAL_IMAGE_MODELS,
     ELEVENLABS_MODELS,
+    ELEVENLABS_VOICES,
+    STYLE_PROMPTS,
+    DEFAULT_STYLE,
     OPENROUTER_MODEL,
     FAL_IMAGE_MODEL,
     ELEVENLABS_MODEL,
+    ELEVENLABS_VOICE_ID,
 )
 from momentary.script_generator import generate_script
 from momentary.image_generator import generate_image, generate_all_images
@@ -206,12 +210,26 @@ with st.sidebar:
         index=FAL_IMAGE_MODELS.index(FAL_IMAGE_MODEL) if FAL_IMAGE_MODEL in FAL_IMAGE_MODELS else 0,
     )
 
+    st.subheader("Visual Style")
+    style = st.selectbox(
+        "Style",
+        options=list(STYLE_PROMPTS.keys()),
+        index=list(STYLE_PROMPTS.keys()).index(DEFAULT_STYLE),
+    )
+
     st.subheader("Voice Generation")
     voice_model = st.selectbox(
         "TTS Model",
         options=ELEVENLABS_MODELS,
         index=ELEVENLABS_MODELS.index(ELEVENLABS_MODEL) if ELEVENLABS_MODEL in ELEVENLABS_MODELS else 0,
     )
+
+    voice_name = st.selectbox(
+        "Voice",
+        options=list(ELEVENLABS_VOICES.keys()),
+        index=list(ELEVENLABS_VOICES.keys())[0] if ELEVENLABS_VOICE_ID in ELEVENLABS_VOICES.values() else 0,
+    )
+    voice_id = ELEVENLABS_VOICES[voice_name]
 
     st.divider()
 
@@ -243,13 +261,15 @@ with tab_pipeline:
     num_scenes = calculate_scenes(duration)
     st.caption(f"~{num_scenes} scenes for {duration} min video")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.caption(f"LLM: {llm_model}")
     with col2:
         st.caption(f"Image: {image_model}")
     with col3:
-        st.caption(f"Voice: {voice_model}")
+        st.caption(f"Style: {style}")
+    with col4:
+        st.caption(f"Voice: {voice_name}")
 
     if st.button("Generate Video", type="primary", disabled=not topic):
         run_dir = create_run_directory(topic)
@@ -262,11 +282,11 @@ with tab_pipeline:
             st.success(f"Script: {title} ({len(scenes)} scenes)")
 
         with st.spinner("Generating images..."):
-            image_paths = generate_all_images(scenes, model=image_model, run_dir=run_dir)
+            image_paths = generate_all_images(scenes, model=image_model, style=style, run_dir=run_dir)
             st.success(f"Generated {len(image_paths)} images")
 
         with st.spinner("Generating voice narration..."):
-            audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
+            audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
             st.success(f"Generated {len(audio_paths)} audio clips")
 
         with st.spinner("Assembling video..."):
@@ -314,11 +334,15 @@ with tab_image:
     prompt = st.text_area("Image Prompt", height=100, placeholder="Describe the scene...")
     index = st.number_input("Scene Index", min_value=0, value=0)
 
-    st.caption(f"Model: {image_model}")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.caption(f"Model: {image_model}")
+    with col2:
+        st.caption(f"Style: {style}")
 
     if st.button("Generate Image", disabled=not prompt):
         with st.spinner("Generating..."):
-            path = generate_image(prompt, index, model=image_model)
+            path = generate_image(prompt, index, model=image_model, style=style)
             st.success(f"Saved: {path}")
             st.image(path, width=720)
 
@@ -328,11 +352,15 @@ with tab_voice:
     text = st.text_area("Narration Text", height=100, placeholder="Enter text to speak...")
     index = st.number_input("Scene Index", min_value=0, value=0, key="voice_index")
 
-    st.caption(f"Model: {voice_model}")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.caption(f"Model: {voice_model}")
+    with col2:
+        st.caption(f"Voice: {voice_name}")
 
     if st.button("Generate Voice", disabled=not text):
         with st.spinner("Generating..."):
-            path = generate_voice(text, index, model=voice_model)
+            path = generate_voice(text, index, model=voice_model, voice_id=voice_id)
             duration = get_audio_duration(path)
             st.success(f"Saved: {path} ({duration:.1f}s)")
             st.audio(path)
@@ -434,13 +462,15 @@ with tab_status:
                 st.error("Missing")
 
     st.subheader("Current Models")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("LLM", llm_model)
     with col2:
         st.metric("Image", image_model)
     with col3:
-        st.metric("Voice", voice_model)
+        st.metric("Style", style)
+    with col4:
+        st.metric("Voice", voice_name)
 
     st.subheader("Runs")
     if RUNS_DIR.exists():

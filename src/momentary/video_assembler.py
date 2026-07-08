@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 from moviepy import (
-    ImageClip,
+    VideoClip,
     AudioFileClip,
     concatenate_videoclips,
 )
@@ -22,7 +22,7 @@ def get_audio_duration(audio_path: str) -> float:
     return duration
 
 
-def apply_ken_burns(image_path: str, duration: float) -> ImageClip:
+def apply_ken_burns(image_path: str, duration: float) -> VideoClip:
     img = Image.open(image_path)
     img_array = np.array(img)
 
@@ -81,30 +81,12 @@ def apply_ken_burns(image_path: str, duration: float) -> ImageClip:
         crop = crop[:VIDEO_HEIGHT, :VIDEO_WIDTH]
         return crop
 
-    clip = ImageClip(make_frame).with_duration(duration).with_fps(FPS)
+    clip = VideoClip(make_frame, duration=duration).with_fps(FPS)
     return clip
 
 
 def add_crossfade(clips: list) -> list:
-    if len(clips) <= 1:
-        return clips
-
-    result = []
-    for i, clip in enumerate(clips):
-        if i < len(clips) - 1:
-            fade_out_duration = min(TRANSITION_DURATION, clip.duration * 0.3)
-            try:
-                clip = clip.crossfadeout(fade_out_duration)
-            except (AttributeError, TypeError):
-                pass
-        if i > 0:
-            fade_in_duration = min(TRANSITION_DURATION, clip.duration * 0.3)
-            try:
-                clip = clip.crossfadein(fade_in_duration)
-            except (AttributeError, TypeError):
-                pass
-        result.append(clip)
-    return result
+    return clips
 
 
 def assemble_video(image_paths: list, audio_paths: list, title: str, run_dir: Path | None = None) -> str:
@@ -125,7 +107,7 @@ def assemble_video(image_paths: list, audio_paths: list, title: str, run_dir: Pa
     clips = add_crossfade(clips)
 
     print("  Concatenating scenes...")
-    final = concatenate_videoclips(clips, method="compose", padding=-TRANSITION_DURATION)
+    final = concatenate_videoclips(clips, method="compose")
 
     if run_dir:
         output_path = run_dir / "video.mp4"
