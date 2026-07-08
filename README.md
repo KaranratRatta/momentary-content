@@ -168,11 +168,11 @@ python pipeline.py --script scripts/space.txt --story space-odyssey --style real
 ### Review control
 
 ```bash
-# Skip the review stage entirely
-python pipeline.py --script scripts/input.txt --story demo --skip-review
+# Enable the review stage (requires a vision-capable LLM model)
+python pipeline.py --script scripts/input.txt --story demo --review
 
 # Stricter review (higher minimum score, more retries)
-python pipeline.py --script scripts/input.txt --story demo --min-score 4 --max-retries 3
+python pipeline.py --script scripts/input.txt --story demo --review --min-score 4 --max-retries 3
 ```
 
 ### Preview prompts without generating

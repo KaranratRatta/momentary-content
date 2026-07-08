@@ -10,7 +10,7 @@ Runs the full pipeline:
 
 Usage:
     python pipeline.py --script scripts/input.txt --story my-story --style storybook
-    python pipeline.py --script scripts/input.txt --style storybook --skip-review
+    python pipeline.py --script scripts/input.txt --style storybook --review
     python pipeline.py --script scripts/input.txt --style anime --skip-generate
 """
 
@@ -52,7 +52,7 @@ def run_pipeline(
     concurrency: Optional[int] = None,
     output_dir: Optional[str] = None,
     skip_generate: bool = False,
-    skip_review: bool = False,
+    review: bool = False,
     skip_video: bool = True,
     config_path: str = "config.yaml",
     min_score: int = 3,
@@ -140,7 +140,7 @@ def run_pipeline(
     )
 
     # ── Stage 3.5: Review ─────────────────────────────────────────────────
-    if not skip_review and llm.is_available():
+    if review and llm.is_available():
         print(f"\n🔍 Stage 3.5: Reviewing images...")
         bible = {}
         if Path(bible_path).exists():
@@ -167,7 +167,7 @@ def run_pipeline(
         )
 
         prompts_path.write_text(json.dumps(segments, indent=2))
-    elif not skip_review:
+    elif review:
         print(f"\n⏭  Review skipped (no LLM available)")
 
     # ── Stage 4: Video [Future] ────────────────────────────────────────────
@@ -200,9 +200,9 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   python pipeline.py --script scripts/input.txt --story puppy-duck --style storybook
-  python pipeline.py --script scripts/input.txt --style storybook --skip-review
+  python pipeline.py --script scripts/input.txt --style storybook --review
   python pipeline.py --script scripts/input.txt --style anime --skip-generate
-  python pipeline.py --script scripts/input.txt --style storybook --min-score 4
+  python pipeline.py --script scripts/input.txt --style storybook --review --min-score 4
         """,
     )
     parser.add_argument("--script", required=True, help="Path to script file with timestamps")
@@ -211,7 +211,7 @@ Examples:
     parser.add_argument("--concurrency", type=int, default=None, help="Parallel image generations")
     parser.add_argument("--output-dir", default=None, help="Base output directory (default: ./output)")
     parser.add_argument("--skip-generate", action="store_true", help="Only build prompts, skip image gen")
-    parser.add_argument("--skip-review", action="store_true", help="Skip the image review stage")
+    parser.add_argument("--review", action="store_true", help="Enable vision LLM review stage (requires vision-capable model)")
     parser.add_argument("--min-score", type=int, default=3, help="Minimum review score to pass (1-5)")
     parser.add_argument("--max-retries", type=int, default=2, help="Max regeneration attempts per image")
     parser.add_argument("--config", default="config.yaml", help="Path to config file")
@@ -224,7 +224,7 @@ Examples:
         concurrency=args.concurrency,
         output_dir=args.output_dir,
         skip_generate=args.skip_generate,
-        skip_review=args.skip_review,
+        review=args.review,
         config_path=args.config,
         min_score=args.min_score,
         max_retries=args.max_retries,

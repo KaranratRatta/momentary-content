@@ -1,7 +1,7 @@
 # ─── Script-to-Image Pipeline Configuration ────────────────────────────────
 
 pipeline:
-  style: "storybook"                 # Style template name (matches styles/<name>.yaml)
+  style: "ms_paint"                 # Style template name (matches styles/<name>.yaml)
   model: "fal-ai/krea-2/turbo"       # FAL model endpoint
   concurrency: 8
   output_dir: "./output"
@@ -24,9 +24,10 @@ generator:
   enable_prompt_expansion: true      # krea-2/turbo: LLM expands prompts for better quality
 
 reviewer:
+  # Review is opt-in via --review flag (requires a vision-capable LLM model)
   min_score: 3                       # Minimum overall score to pass (1-5)
   max_retries: 2                     # Max regeneration attempts per image
-  # model: "google/gemini-2.0-flash" # Optional: override LLM model for review (needs vision)
+  model: "google/gemini-2.0-flash-exp:free" # Optional: vision-capable model for review
 
 video:
   fps: 30

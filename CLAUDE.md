@@ -89,11 +89,14 @@ python pipeline.py --script scripts/input.txt --story my-story --concurrency 4
 # Prompts only (no API call — preview what would be generated)
 python pipeline.py --script scripts/input.txt --story my-story --skip-generate
 
-# Skip the review stage
-python pipeline.py --script scripts/input.txt --story my-story --skip-review
+# Skip the review stage (default — review is opt-in)
+python pipeline.py --script scripts/input.txt --story my-story
+
+# Enable vision LLM review (requires vision-capable model on OpenRouter)
+python pipeline.py --script scripts/input.txt --story my-story --review
 
 # Stricter review (higher minimum score, more retries)
-python pipeline.py --script scripts/input.txt --story my-story --min-score 4 --max-retries 3
+python pipeline.py --script scripts/input.txt --story my-story --review --min-score 4 --max-retries 3
 
 # Custom base output directory
 python pipeline.py --script scripts/input.txt --story my-story --output-dir ./my-projects
