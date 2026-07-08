@@ -12,7 +12,8 @@ from momentary.config import (
     TEMP_IMAGES_DIR,
     TEMP_AUDIO_DIR,
     OUTPUT_DIR,
-    NUM_SCENES,
+    DEFAULT_DURATION_MINUTES,
+    calculate_scenes,
 )
 from momentary.script_generator import generate_script
 from momentary.image_generator import generate_image, generate_all_images
@@ -20,7 +21,128 @@ from momentary.voice_generator import generate_voice, generate_all_voices
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 
-st.set_page_config(page_title="Momentary Content", page_icon="", layout="wide")
+st.set_page_config(page_title="Momentary Content", page_icon="", layout="wide", initial_sidebar_state="collapsed")
+
+st.markdown("""
+<style>
+    .stApp {
+        background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    }
+    .stApp > header {
+        background: transparent;
+    }
+    .stTitle {
+        color: #e0e0ff;
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-align: center;
+        padding: 1rem 0;
+    }
+    .stCaption {
+        color: #8888aa;
+        text-align: center;
+        font-size: 1.1rem;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 6px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border-radius: 8px;
+        padding: 10px 20px;
+        color: #8888aa;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        background: rgba(99, 102, 241, 0.3);
+        color: #e0e0ff;
+    }
+    .stButton > button {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+    .stButton > button:disabled {
+        background: #444;
+        color: #888;
+        box-shadow: none;
+        transform: none;
+    }
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 10px;
+        color: #e0e0ff;
+        padding: 12px 16px;
+    }
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+    .stSlider > div > div > div > div {
+        background: #6366f1;
+    }
+    .stSlider > div > div > div > div > div {
+        background: #6366f1;
+    }
+    .stNumberInput > div > div > input {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 10px;
+        color: #e0e0ff;
+    }
+    .stMetric {
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    [data-testid="stMetricValue"] {
+        color: #e0e0ff;
+        font-size: 1.5rem;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #8888aa;
+    }
+    .stAlert {
+        border-radius: 12px;
+        border: none;
+    }
+    .stSpinner > div {
+        border-color: rgba(99, 102, 241, 0.3);
+        border-top-color: #6366f1;
+    }
+    header {
+        visibility: hidden;
+    }
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    .stDownloadButton > button {
+        background: rgba(99, 102, 241, 0.2);
+        border: 1px solid #6366f1;
+        color: #e0e0ff;
+        border-radius: 10px;
+        padding: 10px 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("Momentary Content")
 st.caption("AI-powered cartoon stick-figure video generation")
@@ -50,11 +172,19 @@ tab_pipeline, tab_script, tab_image, tab_voice, tab_assemble, tab_status = st.ta
 
 with tab_pipeline:
     st.header("Generate Full Video")
-    topic = st.text_input("Topic", placeholder="What Did Ancient Humans Do at Night?")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        topic = st.text_input("Topic", placeholder="What Did Ancient Humans Do at Night?")
+    with col2:
+        duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5)
+
+    num_scenes = calculate_scenes(duration)
+    st.caption(f"~{num_scenes} scenes for {duration} min video")
 
     if st.button("Generate Video", type="primary", disabled=not topic):
         with st.spinner("Generating script..."):
-            script = generate_script(topic)
+            script = generate_script(topic, num_scenes)
             title = script.get("title", topic)
             scenes = script["scenes"]
             st.success(f"Script: {title} ({len(scenes)} scenes)")
@@ -77,11 +207,19 @@ with tab_pipeline:
 
 with tab_script:
     st.header("Test Script Generation")
-    topic = st.text_input("Topic", key="script_topic", placeholder="Enter a topic...")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        topic = st.text_input("Topic", key="script_topic", placeholder="Enter a topic...")
+    with col2:
+        duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5, key="script_duration")
+
+    num_scenes = calculate_scenes(duration)
+    st.caption(f"~{num_scenes} scenes")
 
     if st.button("Generate Script", disabled=not topic):
         with st.spinner("Generating..."):
-            result = generate_script(topic)
+            result = generate_script(topic, num_scenes)
             st.json(result)
 
             col1, col2 = st.columns(2)

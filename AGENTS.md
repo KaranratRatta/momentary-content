@@ -67,11 +67,15 @@ momentary-content/
 ## CLI Commands
 
 ```bash
-# Full pipeline
+# Full pipeline (default 2 min)
 uv run momentary generate "Topic"
 
+# Custom duration
+uv run momentary generate "Topic" -d 5        # 5 minute video
+uv run momentary generate "Topic" -d 0.5      # 30 second video
+
 # Component testing
-uv run momentary script "Topic"
+uv run momentary script "Topic" -d 3
 uv run momentary image "Prompt"
 uv run momentary voice "Text"
 uv run momentary assemble -t "Title"
@@ -79,6 +83,13 @@ uv run momentary assemble -t "Title"
 # Status check
 uv run momentary status
 ```
+
+### Duration-Based Generation
+
+The system calculates scenes from target duration:
+- `scenes = duration_seconds / 8` (avg scene duration)
+- Clamped between 3 and 30 scenes
+- LLM adjusts narration to fit target length
 
 ## Key Design Decisions
 

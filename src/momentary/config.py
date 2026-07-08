@@ -18,7 +18,16 @@ VIDEO_HEIGHT = 1080
 FPS = 30
 TRANSITION_DURATION = 0.5
 
-NUM_SCENES = 10
+DEFAULT_DURATION_MINUTES = 2
+AVG_SCENE_DURATION_SECONDS = 8
+MIN_SCENES = 3
+MAX_SCENES = 30
+
+
+def calculate_scenes(duration_minutes: float) -> int:
+    duration_seconds = duration_minutes * 60
+    scenes = int(duration_seconds / AVG_SCENE_DURATION_SECONDS)
+    return max(MIN_SCENES, min(MAX_SCENES, scenes))
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 OUTPUT_DIR = PROJECT_DIR / "output"

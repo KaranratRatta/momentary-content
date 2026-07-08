@@ -10,6 +10,8 @@ from momentary.config import (
     TEMP_IMAGES_DIR,
     TEMP_AUDIO_DIR,
     OUTPUT_DIR,
+    DEFAULT_DURATION_MINUTES,
+    calculate_scenes,
 )
 from momentary.script_generator import generate_script
 from momentary.image_generator import generate_all_images, generate_image
@@ -47,14 +49,18 @@ def check_api_keys(required: list[str] | None = None):
 @app.command()
 def generate(
     topic: str = typer.Argument(help="The topic for the video"),
+    duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target video duration in minutes"),
 ):
     """Generate a complete video from a topic (full pipeline)."""
     check_api_keys()
 
+    num_scenes = calculate_scenes(duration)
+
     console.print(Panel(f"[bold cyan]{topic}[/bold cyan]", title="Topic", border_style="cyan"))
+    console.print(f"  Target duration: [bold]{duration} min[/bold] (~{num_scenes} scenes)")
 
     console.print("\n[bold][1/4] Generating script...[/bold]")
-    script = generate_script(topic)
+    script = generate_script(topic, num_scenes)
     title = script.get("title", topic)
     scenes = script["scenes"]
     console.print(f"  Title: [bold]{title}[/bold]")
@@ -77,13 +83,15 @@ def generate(
 @app.command()
 def script(
     topic: str = typer.Argument(help="The topic to generate a script for"),
+    duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target duration in minutes"),
     output: Path = typer.Option(None, "--output", "-o", help="Save script to file"),
 ):
     """Test script generation only."""
     check_api_keys(["openrouter"])
 
-    console.print(f"[bold]Generating script for:[/bold] {topic}")
-    result = generate_script(topic)
+    num_scenes = calculate_scenes(duration)
+    console.print(f"[bold]Generating script for:[/bold] {topic} ({num_scenes} scenes, ~{duration} min)")
+    result = generate_script(topic, num_scenes)
 
     formatted = json.dumps(result, indent=2)
     console.print(Panel(formatted, title="Generated Script", border_style="blue"))

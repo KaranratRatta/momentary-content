@@ -28,12 +28,16 @@ uv run streamlit run ui/app.py
 The `momentary` CLI supports individual component testing:
 
 ```bash
-# Full pipeline
+# Full pipeline (default 2 min video)
 uv run momentary generate "Your Topic"
+
+# Specify video duration
+uv run momentary generate "Your Topic" -d 5        # 5 minute video
+uv run momentary generate "Your Topic" -d 0.5      # 30 second video
 
 # Test script generation only
 uv run momentary script "Your Topic"
-uv run momentary script "Your Topic" -o script.json
+uv run momentary script "Your Topic" -d 3 -o script.json
 
 # Test image generation only
 uv run momentary image "A stick figure in a cave with campfire"
@@ -48,6 +52,14 @@ uv run momentary assemble -t "My Video"
 uv run momentary status
 ```
 
+### Video Duration
+
+The system calculates the number of scenes based on target duration:
+- Average scene: ~8 seconds
+- Minimum: 3 scenes (0.5 min)
+- Maximum: 30 scenes (5+ min)
+- The LLM adjusts narration length to fit the target duration
+
 ## Web UI
 
 Launch the Streamlit interface:
@@ -57,7 +69,7 @@ uv run streamlit run ui/app.py
 ```
 
 The UI provides tabs for:
-- **Full Pipeline** - Generate complete video from topic
+- **Full Pipeline** - Generate complete video from topic with duration slider
 - **Test Script** - Test OpenRouter script generation
 - **Test Image** - Test Fal.ai image generation
 - **Test Voice** - Test ElevenLabs voice generation
