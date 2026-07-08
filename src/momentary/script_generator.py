@@ -34,7 +34,7 @@ Return ONLY valid JSON in this format:
 Do not include any text outside the JSON object."""
 
 
-def generate_script(topic: str, num_scenes: int = 10) -> dict:
+def generate_script(topic: str, num_scenes: int = 10, model: str | None = None) -> dict:
     client = OpenAI(
         api_key=OPENROUTER_API_KEY,
         base_url="https://openrouter.ai/api/v1",
@@ -44,7 +44,7 @@ def generate_script(topic: str, num_scenes: int = 10) -> dict:
     user_prompt = f"Write a cartoon stick-figure educational video script about: {topic}"
 
     response = client.chat.completions.create(
-        model=OPENROUTER_MODEL,
+        model=model or OPENROUTER_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

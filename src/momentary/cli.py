@@ -12,6 +12,9 @@ from momentary.config import (
     OUTPUT_DIR,
     DEFAULT_DURATION_MINUTES,
     calculate_scenes,
+    OPENROUTER_MODELS,
+    FAL_IMAGE_MODELS,
+    ELEVENLABS_MODELS,
 )
 from momentary.script_generator import generate_script
 from momentary.image_generator import generate_all_images, generate_image
@@ -50,6 +53,9 @@ def check_api_keys(required: list[str] | None = None):
 def generate(
     topic: str = typer.Argument(help="The topic for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target video duration in minutes"),
+    llm_model: str = typer.Option(None, "--llm-model", help="OpenRouter model (default: from .env)"),
+    image_model: str = typer.Option(None, "--image-model", help="Fal.ai image model (default: from .env)"),
+    voice_model: str = typer.Option(None, "--voice-model", help="ElevenLabs TTS model (default: from .env)"),
 ):
     """Generate a complete video from a topic (full pipeline)."""
     check_api_keys()
@@ -58,20 +64,26 @@ def generate(
 
     console.print(Panel(f"[bold cyan]{topic}[/bold cyan]", title="Topic", border_style="cyan"))
     console.print(f"  Target duration: [bold]{duration} min[/bold] (~{num_scenes} scenes)")
+    if llm_model:
+        console.print(f"  LLM Model: [bold]{llm_model}[/bold]")
+    if image_model:
+        console.print(f"  Image Model: [bold]{image_model}[/bold]")
+    if voice_model:
+        console.print(f"  Voice Model: [bold]{voice_model}[/bold]")
 
     console.print("\n[bold][1/4] Generating script...[/bold]")
-    script = generate_script(topic, num_scenes)
+    script = generate_script(topic, num_scenes, model=llm_model)
     title = script.get("title", topic)
     scenes = script["scenes"]
     console.print(f"  Title: [bold]{title}[/bold]")
     console.print(f"  Scenes: {len(scenes)}")
 
     console.print("\n[bold][2/4] Generating images...[/bold]")
-    image_paths = generate_all_images(scenes)
+    image_paths = generate_all_images(scenes, model=image_model)
     console.print(f"  Generated {len(image_paths)} images")
 
     console.print("\n[bold][3/4] Generating voice narration...[/bold]")
-    audio_paths = generate_all_voices(scenes)
+    audio_paths = generate_all_voices(scenes, model=voice_model)
     console.print(f"  Generated {len(audio_paths)} audio clips")
 
     console.print("\n[bold][4/4] Assembling video...[/bold]")
@@ -84,6 +96,7 @@ def generate(
 def script(
     topic: str = typer.Argument(help="The topic to generate a script for"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target duration in minutes"),
+    model: str = typer.Option(None, "--model", "-m", help="OpenRouter model (default: from .env)"),
     output: Path = typer.Option(None, "--output", "-o", help="Save script to file"),
 ):
     """Test script generation only."""
@@ -91,7 +104,9 @@ def script(
 
     num_scenes = calculate_scenes(duration)
     console.print(f"[bold]Generating script for:[/bold] {topic} ({num_scenes} scenes, ~{duration} min)")
-    result = generate_script(topic, num_scenes)
+    if model:
+        console.print(f"  Model: [bold]{model}[/bold]")
+    result = generate_script(topic, num_scenes, model=model)
 
     formatted = json.dumps(result, indent=2)
     console.print(Panel(formatted, title="Generated Script", border_style="blue"))
@@ -107,12 +122,15 @@ def script(
 def image(
     prompt: str = typer.Argument(help="Image generation prompt"),
     index: int = typer.Option(0, "--index", "-i", help="Scene index number"),
+    model: str = typer.Option(None, "--model", "-m", help="Fal.ai image model (default: from .env)"),
 ):
     """Test image generation only."""
     check_api_keys(["fal"])
 
     console.print(f"[bold]Generating image:[/bold] {prompt}")
-    path = generate_image(prompt, index)
+    if model:
+        console.print(f"  Model: [bold]{model}[/bold]")
+    path = generate_image(prompt, index, model)
     console.print(f"[green]Image saved: {path}[/green]")
 
 
@@ -120,12 +138,15 @@ def image(
 def voice(
     text: str = typer.Argument(help="Text to convert to speech"),
     index: int = typer.Option(0, "--index", "-i", help="Scene index number"),
+    model: str = typer.Option(None, "--model", "-m", help="ElevenLabs TTS model (default: from .env)"),
 ):
     """Test voice generation only."""
     check_api_keys(["elevenlabs"])
 
     console.print(f"[bold]Generating voice:[/bold] {text[:80]}...")
-    path = generate_voice(text, index)
+    if model:
+        console.print(f"  Model: [bold]{model}[/bold]")
+    path = generate_voice(text, index, model)
     duration = get_audio_duration(path)
     console.print(f"[green]Audio saved: {path} ({duration:.1f}s)[/green]")
 

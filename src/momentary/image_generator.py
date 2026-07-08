@@ -4,11 +4,11 @@ from pathlib import Path
 from momentary.config import FAL_IMAGE_MODEL, TEMP_IMAGES_DIR, CARTOON_STYLE_PROMPT, VIDEO_WIDTH, VIDEO_HEIGHT
 
 
-def generate_image(scene_prompt: str, scene_index: int) -> str:
+def generate_image(scene_prompt: str, scene_index: int, model: str | None = None) -> str:
     full_prompt = f"{scene_prompt}, {CARTOON_STYLE_PROMPT}"
 
     result = fal_client.subscribe(
-        FAL_IMAGE_MODEL,
+        model or FAL_IMAGE_MODEL,
         arguments={
             "prompt": full_prompt,
             "image_size": {"width": VIDEO_WIDTH, "height": VIDEO_HEIGHT},
@@ -34,11 +34,11 @@ def generate_image(scene_prompt: str, scene_index: int) -> str:
     return str(output_path)
 
 
-def generate_all_images(scenes: list) -> list:
+def generate_all_images(scenes: list, model: str | None = None) -> list:
     TEMP_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     image_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating image for scene {i + 1}/{len(scenes)}...")
-        path = generate_image(scene["image_prompt"], i)
+        path = generate_image(scene["image_prompt"], i, model)
         image_paths.append(path)
     return image_paths

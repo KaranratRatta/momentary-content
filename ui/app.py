@@ -14,6 +14,12 @@ from momentary.config import (
     OUTPUT_DIR,
     DEFAULT_DURATION_MINUTES,
     calculate_scenes,
+    OPENROUTER_MODELS,
+    FAL_IMAGE_MODELS,
+    ELEVENLABS_MODELS,
+    OPENROUTER_MODEL,
+    FAL_IMAGE_MODEL,
+    ELEVENLABS_MODEL,
 )
 from momentary.script_generator import generate_script
 from momentary.image_generator import generate_image, generate_all_images
@@ -21,7 +27,7 @@ from momentary.voice_generator import generate_voice, generate_all_voices
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 
-st.set_page_config(page_title="Momentary Content", page_icon="", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Momentary Content", page_icon="", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -94,6 +100,12 @@ st.markdown("""
         border-color: #6366f1;
         box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
+    .stSelectbox > div > div > div {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 10px;
+        color: #e0e0ff;
+    }
     .stSlider > div > div > div > div {
         background: #6366f1;
     }
@@ -141,6 +153,25 @@ st.markdown("""
         border-radius: 10px;
         padding: 10px 20px;
     }
+    section[data-testid="stSidebar"] {
+        background: rgba(15, 15, 26, 0.95);
+        border-right: 1px solid rgba(255,255,255,0.1);
+    }
+    section[data-testid="stSidebar"] .stSelectbox > div > div > div {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 8px;
+    }
+    section[data-testid="stSidebar"] h3 {
+        color: #e0e0ff;
+        font-size: 1.1rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    section[data-testid="stSidebar"] label {
+        color: #8888aa;
+        font-size: 0.85rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -159,9 +190,40 @@ def check_keys():
     return missing
 
 
-missing = check_keys()
+with st.sidebar:
+    st.header("Model Settings")
+
+    st.subheader("Script Generation")
+    llm_model = st.selectbox(
+        "LLM Model",
+        options=OPENROUTER_MODELS,
+        index=OPENROUTER_MODELS.index(OPENROUTER_MODEL) if OPENROUTER_MODEL in OPENROUTER_MODELS else 0,
+    )
+
+    st.subheader("Image Generation")
+    image_model = st.selectbox(
+        "Image Model",
+        options=FAL_IMAGE_MODELS,
+        index=FAL_IMAGE_MODELS.index(FAL_IMAGE_MODEL) if FAL_IMAGE_MODEL in FAL_IMAGE_MODELS else 0,
+    )
+
+    st.subheader("Voice Generation")
+    voice_model = st.selectbox(
+        "TTS Model",
+        options=ELEVENLABS_MODELS,
+        index=ELEVENLABS_MODELS.index(ELEVENLABS_MODEL) if ELEVENLABS_MODEL in ELEVENLABS_MODELS else 0,
+    )
+
+    st.divider()
+
+    missing = check_keys()
+    if missing:
+        st.error(f"Missing API keys: {', '.join(missing)}")
+    else:
+        st.success("All API keys configured")
+
+
 if missing:
-    st.error(f"Missing API keys: {', '.join(missing)}. Set them in `.env`")
     st.stop()
 
 
@@ -182,19 +244,27 @@ with tab_pipeline:
     num_scenes = calculate_scenes(duration)
     st.caption(f"~{num_scenes} scenes for {duration} min video")
 
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.caption(f"LLM: {llm_model}")
+    with col2:
+        st.caption(f"Image: {image_model}")
+    with col3:
+        st.caption(f"Voice: {voice_model}")
+
     if st.button("Generate Video", type="primary", disabled=not topic):
         with st.spinner("Generating script..."):
-            script = generate_script(topic, num_scenes)
+            script = generate_script(topic, num_scenes, model=llm_model)
             title = script.get("title", topic)
             scenes = script["scenes"]
             st.success(f"Script: {title} ({len(scenes)} scenes)")
 
         with st.spinner("Generating images..."):
-            image_paths = generate_all_images(scenes)
+            image_paths = generate_all_images(scenes, model=image_model)
             st.success(f"Generated {len(image_paths)} images")
 
         with st.spinner("Generating voice narration..."):
-            audio_paths = generate_all_voices(scenes)
+            audio_paths = generate_all_voices(scenes, model=voice_model)
             st.success(f"Generated {len(audio_paths)} audio clips")
 
         with st.spinner("Assembling video..."):
@@ -215,11 +285,11 @@ with tab_script:
         duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5, key="script_duration")
 
     num_scenes = calculate_scenes(duration)
-    st.caption(f"~{num_scenes} scenes")
+    st.caption(f"~{num_scenes} scenes | Model: {llm_model}")
 
     if st.button("Generate Script", disabled=not topic):
         with st.spinner("Generating..."):
-            result = generate_script(topic, num_scenes)
+            result = generate_script(topic, num_scenes, model=llm_model)
             st.json(result)
 
             col1, col2 = st.columns(2)
@@ -240,9 +310,11 @@ with tab_image:
     prompt = st.text_area("Image Prompt", height=100, placeholder="Describe the scene...")
     index = st.number_input("Scene Index", min_value=0, value=0)
 
+    st.caption(f"Model: {image_model}")
+
     if st.button("Generate Image", disabled=not prompt):
         with st.spinner("Generating..."):
-            path = generate_image(prompt, index)
+            path = generate_image(prompt, index, model=image_model)
             st.success(f"Saved: {path}")
             st.image(path, width=720)
 
@@ -252,9 +324,11 @@ with tab_voice:
     text = st.text_area("Narration Text", height=100, placeholder="Enter text to speak...")
     index = st.number_input("Scene Index", min_value=0, value=0, key="voice_index")
 
+    st.caption(f"Model: {voice_model}")
+
     if st.button("Generate Voice", disabled=not text):
         with st.spinner("Generating..."):
-            path = generate_voice(text, index)
+            path = generate_voice(text, index, model=voice_model)
             duration = get_audio_duration(path)
             st.success(f"Saved: {path} ({duration:.1f}s)")
             st.audio(path)
@@ -307,6 +381,15 @@ with tab_status:
                 st.success("Configured")
             else:
                 st.error("Missing")
+
+    st.subheader("Current Models")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("LLM", llm_model)
+    with col2:
+        st.metric("Image", image_model)
+    with col3:
+        st.metric("Voice", voice_model)
 
     st.subheader("Files")
     img_count = len(img_files) if TEMP_IMAGES_DIR.exists() else 0

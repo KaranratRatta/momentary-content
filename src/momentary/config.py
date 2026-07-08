@@ -12,13 +12,36 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat")
 FAL_IMAGE_MODEL = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux/schnell")
 
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+ELEVENLABS_MODEL = os.getenv("ELEVENLABS_MODEL", "eleven_multilingual_v2")
+
+OPENROUTER_MODELS = [
+    "deepseek/deepseek-chat",
+    "anthropic/claude-sonnet-4",
+    "openai/gpt-4o",
+    "google/gemini-2.5-pro",
+    "meta-llama/llama-3.3-70b-instruct",
+]
+
+FAL_IMAGE_MODELS = [
+    "fal-ai/flux/schnell",
+    "fal-ai/flux-pro",
+    "fal-ai/flux-realism",
+    "fal-ai/flux-anime",
+]
+
+ELEVENLABS_MODELS = [
+    "eleven_multilingual_v2",
+    "eleven_multilingual_v1",
+    "eleven_english_v2",
+    "eleven_english_v1",
+]
 
 VIDEO_WIDTH = 1920
 VIDEO_HEIGHT = 1080
 FPS = 30
 TRANSITION_DURATION = 0.5
 
-DEFAULT_DURATION_MINUTES = 2
+DEFAULT_DURATION_MINUTES = 8.0
 AVG_SCENE_DURATION_SECONDS = 8
 MIN_SCENES = 3
 MAX_SCENES = 30
