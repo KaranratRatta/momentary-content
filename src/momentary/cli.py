@@ -9,11 +9,13 @@ from momentary.config import (
     ELEVENLABS_API_KEY,
     RUNS_DIR,
     DEFAULT_DURATION_MINUTES,
+    DEFAULT_MOTION,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
     FAL_IMAGE_MODELS,
     ELEVENLABS_MODELS,
+    MOTION_EFFECTS,
 )
 from momentary.script_generator import generate_script
 from momentary.image_generator import generate_all_images, generate_image
@@ -52,6 +54,7 @@ def check_api_keys(required: list[str] | None = None):
 def generate(
     topic: str = typer.Argument(help="The topic for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target video duration in minutes"),
+    motion: str = typer.Option(DEFAULT_MOTION, "--motion", "-m", help=f"Motion effect: {', '.join(MOTION_EFFECTS.keys())}"),
     llm_model: str = typer.Option(None, "--llm-model", help="OpenRouter model (default: from .env)"),
     image_model: str = typer.Option(None, "--image-model", help="Fal.ai image model (default: from .env)"),
     voice_model: str = typer.Option(None, "--voice-model", help="ElevenLabs TTS model (default: from .env)"),
@@ -63,6 +66,7 @@ def generate(
 
     console.print(Panel(f"[bold cyan]{topic}[/bold cyan]", title="Topic", border_style="cyan"))
     console.print(f"  Target duration: [bold]{duration} min[/bold] (~{num_scenes} scenes)")
+    console.print(f"  Motion: [bold]{motion}[/bold]")
     if llm_model:
         console.print(f"  LLM Model: [bold]{llm_model}[/bold]")
     if image_model:
@@ -89,7 +93,7 @@ def generate(
     console.print(f"  Generated {len(audio_paths)} audio clips")
 
     console.print("\n[bold][4/4] Assembling video...[/bold]")
-    output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
+    output_path = assemble_video(image_paths, audio_paths, title, motion=motion.lower().replace(" ", "_"), run_dir=run_dir)
 
     console.print(Panel(f"[bold green]{output_path}[/bold green]", title="Video Complete!", border_style="green"))
 

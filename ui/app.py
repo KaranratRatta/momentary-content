@@ -11,6 +11,7 @@ from momentary.config import (
     ELEVENLABS_API_KEY,
     RUNS_DIR,
     DEFAULT_DURATION_MINUTES,
+    DEFAULT_MOTION,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
@@ -19,6 +20,7 @@ from momentary.config import (
     ELEVENLABS_VOICES,
     STYLE_PROMPTS,
     DEFAULT_STYLE,
+    MOTION_EFFECTS,
     OPENROUTER_MODEL,
     FAL_IMAGE_MODEL,
     ELEVENLABS_MODEL,
@@ -217,6 +219,13 @@ with st.sidebar:
         index=list(STYLE_PROMPTS.keys()).index(DEFAULT_STYLE),
     )
 
+    st.subheader("Video Motion")
+    motion = st.selectbox(
+        "Motion Effect",
+        options=list(MOTION_EFFECTS.keys()),
+        index=list(MOTION_EFFECTS.keys()).index(DEFAULT_MOTION),
+    )
+
     st.subheader("Voice Generation")
     voice_model = st.selectbox(
         "TTS Model",
@@ -224,12 +233,31 @@ with st.sidebar:
         index=ELEVENLABS_MODELS.index(ELEVENLABS_MODEL) if ELEVENLABS_MODEL in ELEVENLABS_MODELS else 0,
     )
 
-    voice_name = st.selectbox(
-        "Voice",
-        options=list(ELEVENLABS_VOICES.keys()),
-        index=list(ELEVENLABS_VOICES.keys())[0] if ELEVENLABS_VOICE_ID in ELEVENLABS_VOICES.values() else 0,
+    voice_input_type = st.radio(
+        "Voice Selection",
+        options=["Preset Voices", "Custom Voice ID"],
+        horizontal=True,
     )
-    voice_id = ELEVENLABS_VOICES[voice_name]
+
+    if voice_input_type == "Preset Voices":
+        voice_options = list(ELEVENLABS_VOICES.keys())
+        default_index = 0
+        if ELEVENLABS_VOICE_ID in ELEVENLABS_VOICES.values():
+            default_index = list(ELEVENLABS_VOICES.values()).index(ELEVENLABS_VOICE_ID)
+
+        voice_name = st.selectbox(
+            "Voice",
+            options=voice_options,
+            index=default_index,
+        )
+        voice_id = ELEVENLABS_VOICES[voice_name]
+    else:
+        voice_id = st.text_input(
+            "Voice ID",
+            value=ELEVENLABS_VOICE_ID,
+            placeholder="Enter ElevenLabs Voice ID",
+        )
+        voice_name = "Custom"
 
     st.divider()
 
@@ -261,7 +289,7 @@ with tab_pipeline:
     num_scenes = calculate_scenes(duration)
     st.caption(f"~{num_scenes} scenes for {duration} min video")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.caption(f"LLM: {llm_model}")
     with col2:
@@ -269,6 +297,8 @@ with tab_pipeline:
     with col3:
         st.caption(f"Style: {style}")
     with col4:
+        st.caption(f"Motion: {motion}")
+    with col5:
         st.caption(f"Voice: {voice_name}")
 
     if st.button("Generate Video", type="primary", disabled=not topic):
@@ -290,7 +320,8 @@ with tab_pipeline:
             st.success(f"Generated {len(audio_paths)} audio clips")
 
         with st.spinner("Assembling video..."):
-            output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
+            motion_value = MOTION_EFFECTS[motion]
+            output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
             st.success(f"Video saved: {output_path}")
 
             if Path(output_path).exists():
@@ -385,6 +416,12 @@ with tab_assemble:
             with col2:
                 st.metric("Audio Available", len(aud_files))
 
+            motion = st.selectbox(
+                "Motion Effect",
+                options=list(MOTION_EFFECTS.keys()),
+                index=list(MOTION_EFFECTS.keys()).index(DEFAULT_MOTION),
+            )
+
             if not img_files:
                 st.warning("No images in this run.")
             if not aud_files:
@@ -402,7 +439,8 @@ with tab_assemble:
                         title = script.get("title", "Untitled")
 
                 with st.spinner("Assembling..."):
-                    output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
+                    motion_value = MOTION_EFFECTS[motion]
+                    output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
                     st.success(f"Video saved: {output_path}")
                     st.video(output_path)
     else:
@@ -462,7 +500,7 @@ with tab_status:
                 st.error("Missing")
 
     st.subheader("Current Models")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("LLM", llm_model)
     with col2:
@@ -470,7 +508,12 @@ with tab_status:
     with col3:
         st.metric("Style", style)
     with col4:
-        st.metric("Voice", voice_name)
+        st.metric("Motion", motion)
+    with col5:
+        if voice_name == "Custom":
+            st.metric("Voice", f"Custom ({voice_id[:8]}...)")
+        else:
+            st.metric("Voice", voice_name)
 
     st.subheader("Runs")
     if RUNS_DIR.exists():

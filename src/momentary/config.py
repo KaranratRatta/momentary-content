@@ -148,3 +148,17 @@ STYLE_PROMPTS = {
 }
 
 DEFAULT_STYLE = "Cartoon Stick Figure"
+
+MOTION_EFFECTS = {
+    "Static": "static",
+    "Zoom In": "zoom_in",
+    "Zoom Out": "zoom_out",
+    "Pan Left": "pan_left",
+    "Pan Right": "pan_right",
+    "Pan Up": "pan_up",
+    "Pan Down": "pan_down",
+    "Random": "random",
+    "Variety": "variety",
+}
+
+DEFAULT_MOTION = "Static"

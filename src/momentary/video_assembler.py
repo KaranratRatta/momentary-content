@@ -22,15 +22,22 @@ def get_audio_duration(audio_path: str) -> float:
     return duration
 
 
-def apply_ken_burns(image_path: str, duration: float) -> VideoClip:
+def apply_motion_effect(image_path: str, duration: float, effect: str = "static") -> VideoClip:
     img = Image.open(image_path)
     img_array = np.array(img)
 
-    effects = ["zoom_in", "zoom_out", "pan_left", "pan_right"]
-    effect = random.choice(effects)
+    if effect == "static":
+        def make_frame(t):
+            return img_array[:VIDEO_HEIGHT, :VIDEO_WIDTH]
+        clip = VideoClip(make_frame, duration=duration).with_fps(FPS)
+        return clip
+
+    if effect == "random":
+        effects = ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down"]
+        effect = random.choice(effects)
 
     zoom_start = 1.15
-    zoom_end = 1.0 if effect in ["zoom_in", "pan_left", "pan_right"] else 1.15
+    zoom_end = 1.0 if effect in ["zoom_in", "pan_left", "pan_right", "pan_up", "pan_down"] else 1.15
 
     if effect == "zoom_out":
         zoom_start, zoom_end = 1.0, 1.15
@@ -58,6 +65,12 @@ def apply_ken_burns(image_path: str, duration: float) -> VideoClip:
         elif effect == "pan_right":
             cx = int(rw * 0.35)
             cy = rh // 2
+        elif effect == "pan_up":
+            cx = rw // 2
+            cy = int(rh * 0.65)
+        elif effect == "pan_down":
+            cx = rw // 2
+            cy = int(rh * 0.35)
         else:
             cx = rw // 2
             cy = rh // 2
@@ -89,15 +102,22 @@ def add_crossfade(clips: list) -> list:
     return clips
 
 
-def assemble_video(image_paths: list, audio_paths: list, title: str, run_dir: Path | None = None) -> str:
+def assemble_video(image_paths: list, audio_paths: list, title: str, motion: str = "static", run_dir: Path | None = None) -> str:
     print("  Assembling video...")
 
     clips = []
     for i, (img_path, audio_path) in enumerate(zip(image_paths, audio_paths)):
         audio_duration = get_audio_duration(audio_path)
-        print(f"    Scene {i + 1}: {audio_duration:.1f}s audio, applying Ken Burns...")
 
-        video_clip = apply_ken_burns(img_path, audio_duration)
+        if motion == "variety":
+            effects = ["static", "zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down"]
+            scene_effect = effects[i % len(effects)]
+        else:
+            scene_effect = motion
+
+        print(f"    Scene {i + 1}: {audio_duration:.1f}s audio, effect: {scene_effect}")
+
+        video_clip = apply_motion_effect(img_path, audio_duration, scene_effect)
         audio_clip = AudioFileClip(audio_path)
 
         video_clip = video_clip.with_audio(audio_clip)
