@@ -8,7 +8,7 @@ This document provides instructions for AI agents working on the momentary-conte
 
 ## Project Overview
 
-Automated video generation system that creates cartoon stick-figure educational videos from a topic.
+Automated video generation system that creates educational videos from a topic. Features research-before-writing, multiple narration themes, and improved visual style prompts that reduce AI-generated appearance.
 
 ## Tech Stack
 
@@ -16,8 +16,9 @@ Automated video generation system that creates cartoon stick-figure educational 
 - **Package Manager**: uv + pyproject.toml
 - **Script Generation**: OpenRouter (OpenAI-compatible API)
 - **Image Generation**: Fal.ai (FLUX models)
-- **Voice Generation**: ElevenLabs TTS
+- **Voice Generation**: ElevenLabs TTS (per-scene or single audio with timestamps)
 - **Video Assembly**: MoviePy 2.x + Pillow + NumPy
+- **Audio Splitting**: pydub + FFmpeg
 - **CLI**: Typer + Rich
 - **UI**: Streamlit
 
@@ -75,15 +76,26 @@ momentary-content/
 ## CLI Commands
 
 ```bash
-# Full pipeline (default 8 min)
+# Full pipeline (default 2 min, with research)
 uv run momentary generate "Topic"
 
 # Custom duration
 uv run momentary generate "Topic" -d 5        # 5 minute video
 uv run momentary generate "Topic" -d 0.5      # 30 second video
 
+# Narration theme
+uv run momentary generate "Topic" -t "Humorous"
+uv run momentary generate "Topic" -t "Dramatic"
+
+# Skip research step
+uv run momentary generate "Topic" --no-research
+
+# Audio mode (per-scene or single audio)
+uv run momentary generate "Topic" --audio-mode "Single Audio"  # More natural flow
+uv run momentary generate "Topic" --audio-mode "Per Scene"
+
 # Component testing
-uv run momentary script "Topic" -d 3
+uv run momentary script "Topic" -d 3 -t "Educational"
 uv run momentary image "Prompt"
 uv run momentary voice "Text"
 
@@ -101,16 +113,46 @@ The system calculates scenes from target duration:
 - Clamped between 3 and 30 scenes
 - LLM adjusts narration to fit target length
 
+### Narration Themes
+
+- **Educational** (default): Informative, clear explanations with interesting facts
+- **Humorous**: Witty, casual conversational tone with jokes
+- **Dramatic**: Intense, cinematic storytelling with suspense
+- **Documentary**: Authoritative narrator, serious and factual
+- **Storytelling**: Narrative-driven, like telling a friend a story
+- **Mysterious**: Intriguing, building curiosity about the unknown
+
+### Research Step
+
+By default, the system researches the topic before writing the script. This provides the LLM with accurate facts and interesting angles. Disable with `--no-research`.
+
+### Audio Modes
+
+- **Per Scene**: Generates separate audio clip for each scene. Precise sync but may sound disjointed.
+- **Single Audio** (default): Generates one continuous audio track using ElevenLabs timestamps, then splits at scene boundaries. More natural flow with better voice continuity.
+
 ## Key Design Decisions
 
 ### Image Style
-All image prompts automatically append `CARTOON_STYLE_PROMPT` from `config.py` to maintain consistent cartoon stick-figure style across all scenes.
+All image prompts automatically append a style-specific prompt from `config.py` to maintain consistent visual style. Style prompts include:
+- Anti-AI keywords to reduce glossy/perfect AI appearance
+- Texture and imperfection guidance for hand-drawn feel
+- Specific guidance that animals are drawn with detail (not stick figures)
+- Human characters remain simple stick figures
+
+Available styles: Cartoon Stick Figure, Anime, Realistic, Storybook
 
 ### Ken Burns Effect
-Random effect per scene: zoom_in, zoom_out, pan_left, or pan_right. Applied via Pillow + NumPy frame-by-frame rendering in MoviePy.
+Random effect per scene: zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, or static. Applied via Pillow + NumPy frame-by-frame rendering in MoviePy.
 
 ### Audio-Video Sync
 Each scene's video duration matches its audio clip duration exactly. Audio is generated first, then video is created to match.
+
+### Single Audio Mode
+Uses ElevenLabs `convert_with_timestamps` API to get character-level timing data. The full narration is generated as one audio file, then split at scene boundaries using the timestamp alignment data.
+
+### Research Step
+Before script generation, the system researches the topic to gather facts and interesting angles. This research is passed to the script generator as context, resulting in more accurate and engaging content.
 
 ### Transitions
 0.5s crossfade between scenes using MoviePy's `crossfadein`/`crossfadeout`.
@@ -182,3 +224,4 @@ Verify:
 | `typer` | CLI framework |
 | `rich` | Terminal formatting |
 | `streamlit` | Web UI framework |
+| `pydub` | Audio splitting for single audio mode |

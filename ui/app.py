@@ -12,6 +12,8 @@ from momentary.config import (
     RUNS_DIR,
     DEFAULT_DURATION_MINUTES,
     DEFAULT_MOTION,
+    DEFAULT_AUDIO_MODE,
+    DEFAULT_THEME,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
@@ -21,14 +23,16 @@ from momentary.config import (
     STYLE_PROMPTS,
     DEFAULT_STYLE,
     MOTION_EFFECTS,
+    AUDIO_MODES,
+    NARRATION_THEMES,
     OPENROUTER_MODEL,
     FAL_IMAGE_MODEL,
     ELEVENLABS_MODEL,
     ELEVENLABS_VOICE_ID,
 )
-from momentary.script_generator import generate_script
+from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_image, generate_all_images
-from momentary.voice_generator import generate_voice, generate_all_voices
+from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, split_audio_by_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 
@@ -180,6 +184,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+if "generating" not in st.session_state:
+    st.session_state.generating = False
+if "stop_requested" not in st.session_state:
+    st.session_state.stop_requested = False
+if "generation_step" not in st.session_state:
+    st.session_state.generation_step = 0
+
 st.title("Momentary Content")
 st.caption("AI-powered cartoon stick-figure video generation")
 
@@ -205,6 +216,15 @@ with st.sidebar:
         index=OPENROUTER_MODELS.index(OPENROUTER_MODEL) if OPENROUTER_MODEL in OPENROUTER_MODELS else 0,
     )
 
+    st.subheader("Narration Theme")
+    theme = st.selectbox(
+        "Theme",
+        options=list(NARRATION_THEMES.keys()),
+        index=list(NARRATION_THEMES.keys()).index(DEFAULT_THEME),
+    )
+
+    research = st.checkbox("Research topic before script", value=True)
+
     st.subheader("Image Generation")
     image_model = st.selectbox(
         "Image Model",
@@ -223,8 +243,19 @@ with st.sidebar:
     motion = st.selectbox(
         "Motion Effect",
         options=list(MOTION_EFFECTS.keys()),
-        index=list(MOTION_EFFECTS.keys()).index(DEFAULT_MOTION),
+        index=list(MOTION_EFFECTS.values()).index(DEFAULT_MOTION),
     )
+
+    st.subheader("Audio Mode")
+    audio_mode = st.selectbox(
+        "Audio Generation",
+        options=list(AUDIO_MODES.keys()),
+        index=list(AUDIO_MODES.values()).index(DEFAULT_AUDIO_MODE),
+    )
+    if audio_mode == "Single Audio":
+        st.caption("Generates one continuous audio track, more natural flow")
+    else:
+        st.caption("Generates separate audio per scene")
 
     st.subheader("Voice Generation")
     voice_model = st.selectbox(
@@ -289,43 +320,120 @@ with tab_pipeline:
     num_scenes = calculate_scenes(duration)
     st.caption(f"~{num_scenes} scenes for {duration} min video")
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     with col1:
         st.caption(f"LLM: {llm_model}")
     with col2:
-        st.caption(f"Image: {image_model}")
+        st.caption(f"Theme: {theme}")
     with col3:
         st.caption(f"Style: {style}")
     with col4:
         st.caption(f"Motion: {motion}")
     with col5:
+        st.caption(f"Audio: {audio_mode}")
+    with col6:
+        st.caption(f"Research: {'Yes' if research else 'No'}")
+    with col7:
         st.caption(f"Voice: {voice_name}")
 
-    if st.button("Generate Video", type="primary", disabled=not topic):
-        run_dir = create_run_directory(topic)
+    if st.session_state.generating:
+        col_stop, col_status = st.columns([1, 4])
+        with col_stop:
+            if st.button("⏹ Stop", type="secondary"):
+                st.session_state.stop_requested = True
+                st.warning("Stop requested. Finishing current step...")
+        with col_status:
+            total_steps = 5 if research else 4
+            steps = (["Researching...", "Generating script...", "Generating images...", "Generating voice...", "Assembling video..."]
+                     if research else
+                     ["Generating script...", "Generating images...", "Generating voice...", "Assembling video..."])
+            current = min(st.session_state.generation_step, len(steps) - 1)
+            st.info(f"Step {current + 1}/{total_steps}: {steps[current]}")
+
+    if st.button("Generate Video", type="primary", disabled=not topic or st.session_state.generating):
+        st.session_state.generating = True
+        st.session_state.stop_requested = False
+        st.session_state.generation_step = 0
+        st.session_state.run_dir = create_run_directory(topic)
+        st.rerun()
+
+    if st.session_state.generating and not st.session_state.stop_requested:
+        run_dir = st.session_state.run_dir
         st.info(f"Run directory: `{run_dir}`")
 
-        with st.spinner("Generating script..."):
-            script = generate_script(topic, num_scenes, model=llm_model, run_dir=run_dir)
-            title = script.get("title", topic)
-            scenes = script["scenes"]
-            st.success(f"Script: {title} ({len(scenes)} scenes)")
+        if research and st.session_state.generation_step == 0:
+            st.session_state.generation_step = 1
+            with st.spinner("Researching topic..."):
+                research_context = research_topic(topic, model=llm_model)
+                st.session_state.research_context = research_context
+                st.success(f"Research complete ({len(research_context)} chars)")
+            st.rerun()
 
-        with st.spinner("Generating images..."):
-            image_paths = generate_all_images(scenes, model=image_model, style=style, run_dir=run_dir)
-            st.success(f"Generated {len(image_paths)} images")
+        script_step = 1 if research else 0
+        if st.session_state.generation_step == script_step:
+            st.session_state.generation_step = script_step + 1
+            with st.spinner("Generating script..."):
+                research_context = st.session_state.get("research_context", "")
+                script = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, run_dir=run_dir)
+                title = script.get("title", topic)
+                scenes = script["scenes"]
+                st.session_state.script = script
+                st.session_state.title = title
+                st.session_state.scenes = scenes
+                st.success(f"Script: {title} ({len(scenes)} scenes)")
+            st.rerun()
 
-        with st.spinner("Generating voice narration..."):
-            audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
-            st.success(f"Generated {len(audio_paths)} audio clips")
+        image_step = script_step + 1
+        if st.session_state.generation_step == image_step:
+            st.session_state.generation_step = image_step + 1
+            with st.spinner("Generating images..."):
+                scenes = st.session_state.scenes
+                image_paths = generate_all_images(scenes, model=image_model, style=style, run_dir=run_dir)
+                st.session_state.image_paths = image_paths
+                st.success(f"Generated {len(image_paths)} images")
+            st.rerun()
 
-        with st.spinner("Assembling video..."):
-            motion_value = MOTION_EFFECTS[motion]
-            output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
-            st.success(f"Video saved: {output_path}")
+        voice_step = image_step + 1
+        if st.session_state.generation_step == voice_step:
+            st.session_state.generation_step = voice_step + 1
+            with st.spinner("Generating voice narration..."):
+                scenes = st.session_state.scenes
+                if audio_mode == "Single Audio":
+                    full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
+                    boundaries = timestamp_data["boundaries"]
+                    audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
+                    st.session_state.audio_paths = audio_paths
+                    st.success(f"Generated single audio, split into {len(audio_paths)} clips")
+                else:
+                    audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
+                    st.session_state.audio_paths = audio_paths
+                    st.success(f"Generated {len(audio_paths)} audio clips")
+            st.rerun()
 
-            if Path(output_path).exists():
-                st.video(output_path)
+        assemble_step = voice_step + 1
+        if st.session_state.generation_step == assemble_step:
+            st.session_state.generation_step = assemble_step + 1
+            with st.spinner("Assembling video..."):
+                image_paths = st.session_state.image_paths
+                audio_paths = st.session_state.audio_paths
+                title = st.session_state.title
+                motion_value = MOTION_EFFECTS[motion]
+                output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
+                st.session_state.output_path = output_path
+                st.session_state.generating = False
+                st.session_state.generation_step = 0
+                st.success(f"Video saved: {output_path}")
+            st.rerun()
+
+    if "output_path" in st.session_state and st.session_state.output_path:
+        if Path(st.session_state.output_path).exists():
+            st.video(st.session_state.output_path)
+
+    if st.session_state.stop_requested:
+        st.session_state.generating = False
+        st.session_state.generation_step = 0
+        st.session_state.stop_requested = False
+        st.warning("Generation stopped.")
 
 
 with tab_script:
@@ -419,7 +527,7 @@ with tab_assemble:
             motion = st.selectbox(
                 "Motion Effect",
                 options=list(MOTION_EFFECTS.keys()),
-                index=list(MOTION_EFFECTS.keys()).index(DEFAULT_MOTION),
+                index=list(MOTION_EFFECTS.values()).index(DEFAULT_MOTION),
             )
 
             if not img_files:

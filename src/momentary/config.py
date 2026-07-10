@@ -10,10 +10,10 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 FAL_KEY = os.getenv("FAL_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-5")
 FAL_IMAGE_MODEL = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux/schnell")
 
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "HKFOb9iktHA85uKXydRT")
 ELEVENLABS_MODEL = os.getenv("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 
 ELEVENLABS_VOICES = {
@@ -31,11 +31,13 @@ ELEVENLABS_VOICES = {
     "Arnold": "VR6AewLTigWG4xSOukaG",
     "Adam": "pNInz6obpgDQGcFmaJgB",
     "Sam": "yoZ06aMxZJJ28mfd3POQ",
+    "Clara": "Qggl4b0xRMiqOwhPtVWT",
+    "Russ": "HKFOb9iktHA85uKXydRT",
 }
 
 OPENROUTER_MODELS = [
     "deepseek/deepseek-chat",
-    "anthropic/claude-sonnet-4",
+    "anthropic/claude-sonnet-5",
     "openai/gpt-4o",
     "google/gemini-2.5-pro",
     "meta-llama/llama-3.3-70b-instruct",
@@ -95,49 +97,53 @@ def create_run_directory(topic: str) -> Path:
 
 
 CARTOON_STYLE_PROMPT = (
-    "cartoon stick figure illustration style, "
-    "simple hand-drawn sketchy line art, "
-    "round white head character with big eyes and simple facial expression, "
-    "stick figure body with thin black lines, "
-    "flat colors with minimal shading, "
-    "earthy muted color palette (browns, dark blues, warm oranges), "
-    "cave or historical setting, "
-    "dramatic lighting from campfire or torch, "
-    "humorous casual tone, "
-    "2D animation style, "
-    "no photorealism, "
-    "no 3D rendering"
+    "hand-drawn cartoon illustration, "
+    "slightly wobbly imperfect lines like actual hand drawing, "
+    "organic textured paper background with subtle grain, "
+    "human characters as simple stick figures with round white heads and dot eyes, "
+    "animals drawn with more detail and personality, not stick figures, "
+    "warm earthy color palette with slight color bleeding at edges, "
+    "visible pencil or ink texture in the linework, "
+    "slight asymmetry and natural imperfections, "
+    "dramatic lighting with soft shadows, "
+    "casual humorous educational YouTube style like Kurzgesagt or Vsauce, "
+    "no glossy AI look, no perfect symmetry, no plastic smoothness, "
+    "no photorealism, no 3D rendering"
 )
 
 ANIME_STYLE_PROMPT = (
-    "anime illustration style, "
-    "detailed anime character design with expressive eyes, "
-    "vibrant colors with cel shading, "
-    "dynamic composition with dramatic angles, "
-    "Japanese animation aesthetic, "
-    "clean line art with detailed backgrounds, "
-    "emotional lighting and atmosphere"
+    "anime illustration style with hand-drawn feel, "
+    "slight line weight variation like actual pen work, "
+    "textured background with subtle noise, "
+    "expressive character design with detailed eyes, "
+    "animals drawn with full anime detail and personality, "
+    "vibrant colors with slight color bleeding, "
+    "dynamic composition with natural imperfections, "
+    "emotional atmospheric lighting, "
+    "no glossy AI perfection, no plastic smoothness"
 )
 
 REALISTIC_STYLE_PROMPT = (
-    "photorealistic digital art, "
-    "highly detailed realistic rendering, "
-    "cinematic lighting and composition, "
-    "professional photography quality, "
-    "natural color palette, "
-    "detailed textures and materials, "
-    "dramatic mood lighting"
+    "cinematic digital painting with photographic quality, "
+    "film grain texture overlay, "
+    "natural lighting with realistic shadows and highlights, "
+    "detailed textures on surfaces and materials, "
+    "animals rendered with full realistic detail, "
+    "slight depth of field blur on background elements, "
+    "color grading like professional film, "
+    "no AI artifacts, no oversharpening, no plastic skin"
 )
 
 STORYBOOK_STYLE_PROMPT = (
-    "children's storybook illustration style, "
-    "whimsical hand-drawn artwork, "
-    "soft pastel color palette, "
-    "gentle rounded shapes and friendly characters, "
-    "warm cozy atmosphere, "
-    "textured paper-like background, "
-    "classic fairy tale aesthetic, "
-    "inviting and magical mood"
+    "classic children's book illustration, "
+    "watercolor and colored pencil texture, "
+    "visible brush strokes and paper texture, "
+    "soft warm color palette with slight color bleeding, "
+    "whimsical hand-drawn characters with personality, "
+    "animals drawn with charming detail and expression, "
+    "cozy atmospheric lighting, "
+    "slight imperfections that show it's hand-made, "
+    "no digital perfection, no glossy AI look"
 )
 
 STYLE_PROMPTS = {
@@ -161,4 +167,35 @@ MOTION_EFFECTS = {
     "Variety": "variety",
 }
 
-DEFAULT_MOTION = "Static"
+DEFAULT_MOTION = "static"
+
+AUDIO_MODES = {
+    "Per Scene": "per_scene",
+    "Single Audio": "single_audio",
+}
+
+DEFAULT_AUDIO_MODE = "single_audio"
+
+NARRATION_THEMES = {
+    "Educational": "educational, informative, clear explanations with interesting facts",
+    "Humorous": "humorous, witty, casual conversational tone with jokes and playful observations",
+    "Dramatic": "dramatic, intense, cinematic storytelling with suspense and emotional weight",
+    "Documentary": "documentary-style, authoritative narrator, serious and factual presentation",
+    "Storytelling": "storytelling, narrative-driven, like telling a friend an amazing story",
+    "Mysterious": "mysterious, intriguing, building curiosity and wonder about the unknown",
+}
+
+DEFAULT_THEME = "Educational"
+
+RESEARCH_PROMPT = """You are a research assistant. Given a topic, provide key facts, interesting angles, and notable details that would make a video script more accurate and engaging.
+
+Focus on:
+- Surprising or counterintuitive facts
+- Historical context and timeline
+- Scientific explanations (if applicable)
+- Common misconceptions to address
+- Specific examples and anecdotes
+
+Keep it concise but informative. Return as a structured list of key points.
+
+Topic: {topic}"""
