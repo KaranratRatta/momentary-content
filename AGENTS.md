@@ -94,6 +94,11 @@ uv run momentary generate "Topic" --no-research
 uv run momentary generate "Topic" --audio-mode "Single Audio"  # More natural flow
 uv run momentary generate "Topic" --audio-mode "Per Scene"
 
+# Image density (control number of images)
+uv run momentary generate "Topic" --density "More"      # 2x images
+uv run momentary generate "Topic" --density "Maximum"   # 3x images
+uv run momentary generate "Topic" --density "Fewer"     # 0.5x images
+
 # Component testing
 uv run momentary script "Topic" -d 3 -t "Educational"
 uv run momentary image "Prompt"
@@ -109,9 +114,17 @@ uv run momentary status
 ### Duration-Based Generation
 
 The system calculates scenes from target duration:
-- `scenes = duration_seconds / 8` (avg scene duration)
+- `scenes = (duration_seconds / 8) * density_multiplier`
 - Clamped between 3 and 30 scenes
 - LLM adjusts narration to fit target length
+
+### Image Density
+
+Control the number of images generated:
+- **Fewer** (0.5x): Half the normal image count, each shown longer
+- **Normal** (1.0x): Standard image count
+- **More** (2.0x): Double the images, faster transitions
+- **Maximum** (3.0x): Triple the images, very dynamic
 
 ### Narration Themes
 

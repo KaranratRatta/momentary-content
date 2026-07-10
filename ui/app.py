@@ -14,6 +14,7 @@ from momentary.config import (
     DEFAULT_MOTION,
     DEFAULT_AUDIO_MODE,
     DEFAULT_THEME,
+    DEFAULT_IMAGE_DENSITY,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
@@ -25,6 +26,7 @@ from momentary.config import (
     MOTION_EFFECTS,
     AUDIO_MODES,
     NARRATION_THEMES,
+    IMAGE_DENSITY,
     OPENROUTER_MODEL,
     FAL_IMAGE_MODEL,
     ELEVENLABS_MODEL,
@@ -232,6 +234,20 @@ with st.sidebar:
         index=FAL_IMAGE_MODELS.index(FAL_IMAGE_MODEL) if FAL_IMAGE_MODEL in FAL_IMAGE_MODELS else 0,
     )
 
+    st.subheader("Image Density")
+    density = st.selectbox(
+        "Images per video",
+        options=list(IMAGE_DENSITY.keys()),
+        index=list(IMAGE_DENSITY.keys()).index(DEFAULT_IMAGE_DENSITY),
+    )
+    density_descriptions = {
+        "Fewer": "Fewer images, each shown longer",
+        "Normal": "Standard image count",
+        "More": "More images, faster transitions",
+        "Maximum": "Maximum images, very dynamic",
+    }
+    st.caption(density_descriptions.get(density, ""))
+
     st.subheader("Visual Style")
     style = st.selectbox(
         "Style",
@@ -317,10 +333,10 @@ with tab_pipeline:
     with col2:
         duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5)
 
-    num_scenes = calculate_scenes(duration)
+    num_scenes = calculate_scenes(duration, density)
     st.caption(f"~{num_scenes} scenes for {duration} min video")
 
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+    col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
     with col1:
         st.caption(f"LLM: {llm_model}")
     with col2:
@@ -328,12 +344,14 @@ with tab_pipeline:
     with col3:
         st.caption(f"Style: {style}")
     with col4:
-        st.caption(f"Motion: {motion}")
+        st.caption(f"Density: {density}")
     with col5:
-        st.caption(f"Audio: {audio_mode}")
+        st.caption(f"Motion: {motion}")
     with col6:
-        st.caption(f"Research: {'Yes' if research else 'No'}")
+        st.caption(f"Audio: {audio_mode}")
     with col7:
+        st.caption(f"Research: {'Yes' if research else 'No'}")
+    with col8:
         st.caption(f"Voice: {voice_name}")
 
     if st.session_state.generating:
@@ -445,13 +463,16 @@ with tab_script:
     with col2:
         duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5, key="script_duration")
 
-    num_scenes = calculate_scenes(duration)
-    st.caption(f"~{num_scenes} scenes | Model: {llm_model}")
+    num_scenes = calculate_scenes(duration, density)
+    st.caption(f"~{num_scenes} scenes | Model: {llm_model} | Density: {density}")
 
     if st.button("Generate Script", disabled=not topic):
         run_dir = create_run_directory(topic)
         with st.spinner("Generating..."):
-            result = generate_script(topic, num_scenes, model=llm_model, run_dir=run_dir)
+            research_context = ""
+            if research:
+                research_context = research_topic(topic, model=llm_model)
+            result = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, run_dir=run_dir)
             st.success(f"Script saved to: `{run_dir / 'script.json'}`")
             st.json(result)
 

@@ -67,12 +67,22 @@ TRANSITION_DURATION = 0.5
 DEFAULT_DURATION_MINUTES = 0.5
 AVG_SCENE_DURATION_SECONDS = 8
 MIN_SCENES = 3
-MAX_SCENES = 30
+MAX_SCENES = 200
+
+IMAGE_DENSITY = {
+    "Fewer": 0.5,
+    "Normal": 1.0,
+    "More": 2.0,
+    "Maximum": 3.0,
+}
+
+DEFAULT_IMAGE_DENSITY = "Normal"
 
 
-def calculate_scenes(duration_minutes: float) -> int:
+def calculate_scenes(duration_minutes: float, density: str = DEFAULT_IMAGE_DENSITY) -> int:
+    multiplier = IMAGE_DENSITY.get(density, 1.0)
     duration_seconds = duration_minutes * 60
-    scenes = int(duration_seconds / AVG_SCENE_DURATION_SECONDS)
+    scenes = int((duration_seconds / AVG_SCENE_DURATION_SECONDS) * multiplier)
     return max(MIN_SCENES, min(MAX_SCENES, scenes))
 
 

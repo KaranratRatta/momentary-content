@@ -12,6 +12,7 @@ from momentary.config import (
     DEFAULT_MOTION,
     DEFAULT_AUDIO_MODE,
     DEFAULT_THEME,
+    DEFAULT_IMAGE_DENSITY,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
@@ -20,6 +21,7 @@ from momentary.config import (
     MOTION_EFFECTS,
     AUDIO_MODES,
     NARRATION_THEMES,
+    IMAGE_DENSITY,
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_all_images, generate_image
@@ -58,6 +60,7 @@ def check_api_keys(required: list[str] | None = None):
 def generate(
     topic: str = typer.Argument(help="The topic for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target video duration in minutes"),
+    density: str = typer.Option(DEFAULT_IMAGE_DENSITY, "--density", help=f"Image density: {', '.join(IMAGE_DENSITY.keys())}"),
     motion: str = typer.Option(DEFAULT_MOTION, "--motion", "-m", help=f"Motion effect: {', '.join(MOTION_EFFECTS.keys())}"),
     audio_mode: str = typer.Option(DEFAULT_AUDIO_MODE, "--audio-mode", help=f"Audio mode: {', '.join(AUDIO_MODES.keys())}"),
     theme: str = typer.Option(DEFAULT_THEME, "--theme", "-t", help=f"Narration theme: {', '.join(NARRATION_THEMES.keys())}"),
@@ -69,10 +72,11 @@ def generate(
     """Generate a complete video from a topic (full pipeline)."""
     check_api_keys()
 
-    num_scenes = calculate_scenes(duration)
+    num_scenes = calculate_scenes(duration, density)
 
     console.print(Panel(f"[bold cyan]{topic}[/bold cyan]", title="Topic", border_style="cyan"))
     console.print(f"  Target duration: [bold]{duration} min[/bold] (~{num_scenes} scenes)")
+    console.print(f"  Image density: [bold]{density}[/bold]")
     console.print(f"  Theme: [bold]{theme}[/bold]")
     console.print(f"  Motion: [bold]{motion}[/bold]")
     console.print(f"  Audio mode: [bold]{audio_mode}[/bold]")
