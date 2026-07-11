@@ -11,7 +11,7 @@ FAL_KEY = os.getenv("FAL_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-5")
-FAL_IMAGE_MODEL = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux/schnell")
+FAL_IMAGE_MODEL = os.getenv("FAL_IMAGE_MODEL", "fal-ai/krea-2/turbo")
 
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "HKFOb9iktHA85uKXydRT")
 ELEVENLABS_MODEL = os.getenv("ELEVENLABS_MODEL", "eleven_multilingual_v2")
@@ -33,6 +33,8 @@ ELEVENLABS_VOICES = {
     "Sam": "yoZ06aMxZJJ28mfd3POQ",
     "Clara": "Qggl4b0xRMiqOwhPtVWT",
     "Russ": "HKFOb9iktHA85uKXydRT",
+    "Om": "ePiPWpzcHZrcqRzFrgQg",
+
 }
 
 OPENROUTER_MODELS = [
