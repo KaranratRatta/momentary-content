@@ -5,6 +5,7 @@ This document provides instructions for AI agents working on the momentary-conte
 ## Important Rules
 
 - **Do NOT push code to git.** The user will push code themselves. Only commit locally if asked.
+- **Always update both UI and CLI together.** When adding a new parameter, option, or feature, you MUST update both `src/momentary/cli.py` AND `ui/app.py`. The CLI uses Typer and the UI uses Streamlit — they are separate entry points that call the same underlying functions. Forgetting to update one of them causes bugs where the UI passes `None` for parameters the CLI correctly passes. Always check both files when making changes.
 
 ## Project Overview
 

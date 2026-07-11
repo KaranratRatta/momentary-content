@@ -59,6 +59,7 @@ def check_api_keys(required: list[str] | None = None):
 @app.command()
 def generate(
     topic: str = typer.Argument(help="The topic for the video"),
+    video_idea: str = typer.Option("", "--idea", "-i", help="Optional: specific angle or focus for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target video duration in minutes"),
     density: str = typer.Option(DEFAULT_IMAGE_DENSITY, "--density", help=f"Image density: {', '.join(IMAGE_DENSITY.keys())}"),
     motion: str = typer.Option(DEFAULT_MOTION, "--motion", "-m", help=f"Motion effect: {', '.join(MOTION_EFFECTS.keys())}"),
@@ -78,6 +79,8 @@ def generate(
     console.print(f"  Target duration: [bold]{duration} min[/bold] (~{num_scenes} scenes)")
     console.print(f"  Image density: [bold]{density}[/bold]")
     console.print(f"  Theme: [bold]{theme}[/bold]")
+    if video_idea:
+        console.print(f"  Video idea: [bold]{video_idea}[/bold]")
     console.print(f"  Motion: [bold]{motion}[/bold]")
     console.print(f"  Audio mode: [bold]{audio_mode}[/bold]")
     console.print(f"  Research: [bold]{'Yes' if research else 'No'}[/bold]")
@@ -98,11 +101,14 @@ def generate(
         console.print(f"  Research complete ({len(research_context)} chars)")
 
     console.print(f"\n[bold][{'2' if research else '1'}/5] Generating script...[/bold]")
-    script = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, run_dir=run_dir)
+    target_duration_seconds = duration * 60
+    script = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, target_duration_seconds=target_duration_seconds, video_idea=video_idea, run_dir=run_dir)
     title = script.get("title", topic)
     scenes = script["scenes"]
     console.print(f"  Title: [bold]{title}[/bold]")
     console.print(f"  Scenes: {len(scenes)}")
+    total_chars = sum(len(s.get("narration", "")) for s in scenes)
+    console.print(f"  Total narration: {total_chars} chars (~{total_chars/15:.0f}s of audio)")
 
     console.print(f"\n[bold][{'3' if research else '2'}/5] Generating images...[/bold]")
     image_paths = generate_all_images(scenes, model=image_model, run_dir=run_dir)
@@ -127,6 +133,7 @@ def generate(
 @app.command()
 def script(
     topic: str = typer.Argument(help="The topic to generate a script for"),
+    video_idea: str = typer.Option("", "--idea", "-i", help="Optional: specific angle or focus for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target duration in minutes"),
     theme: str = typer.Option(DEFAULT_THEME, "--theme", "-t", help=f"Narration theme: {', '.join(NARRATION_THEMES.keys())}"),
     research: bool = typer.Option(True, "--research/--no-research", help="Research topic before writing script"),
@@ -139,6 +146,8 @@ def script(
     num_scenes = calculate_scenes(duration)
     console.print(f"[bold]Generating script for:[/bold] {topic} ({num_scenes} scenes, ~{duration} min)")
     console.print(f"  Theme: [bold]{theme}[/bold]")
+    if video_idea:
+        console.print(f"  Video idea: [bold]{video_idea}[/bold]")
     console.print(f"  Research: [bold]{'Yes' if research else 'No'}[/bold]")
     if model:
         console.print(f"  Model: [bold]{model}[/bold]")
@@ -151,7 +160,8 @@ def script(
         research_context = research_topic(topic, model=model)
         console.print(f"  Research complete ({len(research_context)} chars)")
 
-    result = generate_script(topic, num_scenes, model=model, theme=theme, research_context=research_context, run_dir=run_dir)
+    target_duration_seconds = duration * 60
+    result = generate_script(topic, num_scenes, model=model, theme=theme, research_context=research_context, target_duration_seconds=target_duration_seconds, video_idea=video_idea, run_dir=run_dir)
 
     formatted = json.dumps(result, indent=2)
     console.print(Panel(formatted, title="Generated Script", border_style="blue"))

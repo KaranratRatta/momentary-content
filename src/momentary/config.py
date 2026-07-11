@@ -76,7 +76,7 @@ IMAGE_DENSITY = {
     "Maximum": 3.0,
 }
 
-DEFAULT_IMAGE_DENSITY = "Normal"
+DEFAULT_IMAGE_DENSITY = "More"
 
 
 def calculate_scenes(duration_minutes: float, density: str = DEFAULT_IMAGE_DENSITY) -> int:

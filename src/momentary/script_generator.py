@@ -4,7 +4,7 @@ from openai import OpenAI
 from momentary.config import OPENROUTER_API_KEY, OPENROUTER_MODEL, NARRATION_THEMES, DEFAULT_THEME, RESEARCH_PROMPT
 
 
-def _build_system_prompt(num_scenes: int, theme: str = "Educational", research_context: str = "") -> str:
+def _build_system_prompt(num_scenes: int, theme: str = "Educational", research_context: str = "", target_duration_seconds: float | None = None, video_idea: str = "") -> str:
     theme_description = NARRATION_THEMES.get(theme, NARRATION_THEMES[DEFAULT_THEME])
 
     research_section = ""
@@ -12,19 +12,39 @@ def _build_system_prompt(num_scenes: int, theme: str = "Educational", research_c
         research_section = f"""
 
 RESEARCH CONTEXT (use these facts to make your script accurate and interesting):
-{research_context}"""
+{research_context}
+
+NOTE: You do NOT need to use all the facts above. Select only the most relevant and interesting ones that fit the target video length. You can also add additional facts or angles not mentioned above if they make the video more engaging."""
+
+    duration_section = ""
+    if target_duration_seconds:
+        avg_per_scene = target_duration_seconds / num_scenes
+        duration_section = f"""
+
+TARGET DURATION: The full video should be approximately {target_duration_seconds} seconds ({target_duration_seconds/60:.1f} minutes).
+With {num_scenes} scenes, each scene's narration should be roughly {avg_per_scene:.0f} seconds when spoken aloud.
+Write naturally, but keep this pacing in mind. Good narration quality is more important than hitting exact timing."""
+
+    idea_section = ""
+    if video_idea:
+        idea_section = f"""
+
+VIDEO IDEA / FOCUS (the creator wants to emphasize these aspects):
+{video_idea}"""
+
+    duration_phrase = f" and approximately {target_duration_seconds} seconds long" if target_duration_seconds else ""
 
     return f"""You are a YouTube scriptwriter for an educational channel that uses hand-drawn cartoon illustrations.
 The style is casual and engaging, similar to channels like Kurzgesagt, Vsauce, or Zenn.
 
 NARRATION STYLE: {theme_description}
 
-Write a script with exactly {num_scenes} scenes about the given topic.{research_section}
+Write a script with exactly {num_scenes} scenes{duration_phrase} about the given topic.{research_section}{duration_section}{idea_section}
 
 Each scene should have:
-- narration: 1-3 sentences that match the narration style above
+- narration: Natural, engaging narration. Write quality content - don't sacrifice writing quality for brevity. Let the narration flow naturally.
 - image_prompt: a detailed visual description for generating an illustration
-- duration_hint: estimated seconds for this scene (5-12 seconds based on narration length)
+- duration_hint: estimated seconds for this scene based on narration length
 
 IMPORTANT IMAGE PROMPT GUIDELINES:
 - Human characters: simple stick figures with round white heads and dot eyes
@@ -39,7 +59,7 @@ Return ONLY valid JSON in this format:
   "title": "Video Title",
   "scenes": [
     {{
-      "narration": "Narration text here",
+      "narration": "Natural narration here",
       "image_prompt": "Detailed image prompt here",
       "duration_hint": 8
     }}
@@ -55,6 +75,8 @@ def generate_script(
     model: str | None = None,
     theme: str = DEFAULT_THEME,
     research_context: str = "",
+    target_duration_seconds: float | None = None,
+    video_idea: str = "",
     run_dir: Path | None = None,
 ) -> dict:
     client = OpenAI(
@@ -62,7 +84,7 @@ def generate_script(
         base_url="https://openrouter.ai/api/v1",
     )
 
-    system_prompt = _build_system_prompt(num_scenes, theme, research_context)
+    system_prompt = _build_system_prompt(num_scenes, theme, research_context, target_duration_seconds, video_idea)
     user_prompt = f"Write a video script about: {topic}"
 
     response = client.chat.completions.create(

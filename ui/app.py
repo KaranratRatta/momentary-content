@@ -192,6 +192,22 @@ if "stop_requested" not in st.session_state:
     st.session_state.stop_requested = False
 if "generation_step" not in st.session_state:
     st.session_state.generation_step = 0
+if "run_dir" not in st.session_state:
+    st.session_state.run_dir = None
+if "research_context" not in st.session_state:
+    st.session_state.research_context = ""
+if "script" not in st.session_state:
+    st.session_state.script = None
+if "title" not in st.session_state:
+    st.session_state.title = None
+if "scenes" not in st.session_state:
+    st.session_state.scenes = None
+if "image_paths" not in st.session_state:
+    st.session_state.image_paths = None
+if "audio_paths" not in st.session_state:
+    st.session_state.audio_paths = None
+if "output_path" not in st.session_state:
+    st.session_state.output_path = None
 
 st.title("Momentary Content")
 st.caption("AI-powered cartoon stick-figure video generation")
@@ -333,6 +349,8 @@ with tab_pipeline:
     with col2:
         duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5)
 
+    video_idea = st.text_input("Video Idea (optional)", placeholder="e.g., Focus on layer 2 solutions and scalability", help="Optional: specific angle or focus for the video. Leave empty for general coverage.")
+
     num_scenes = calculate_scenes(duration, density)
     st.caption(f"~{num_scenes} scenes for {duration} min video")
 
@@ -392,7 +410,17 @@ with tab_pipeline:
             st.session_state.generation_step = script_step + 1
             with st.spinner("Generating script..."):
                 research_context = st.session_state.get("research_context", "")
-                script = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, run_dir=run_dir)
+                target_duration_seconds = duration * 60
+                script = generate_script(
+                    topic,
+                    num_scenes,
+                    model=llm_model,
+                    theme=theme,
+                    research_context=research_context,
+                    target_duration_seconds=target_duration_seconds,
+                    video_idea=video_idea,
+                    run_dir=run_dir,
+                )
                 title = script.get("title", topic)
                 scenes = script["scenes"]
                 st.session_state.script = script
@@ -435,6 +463,13 @@ with tab_pipeline:
                 image_paths = st.session_state.image_paths
                 audio_paths = st.session_state.audio_paths
                 title = st.session_state.title
+
+                if not image_paths or not audio_paths or not title:
+                    st.error("Missing required data for video assembly. Please restart the generation.")
+                    st.session_state.generating = False
+                    st.session_state.generation_step = 0
+                    st.rerun()
+
                 motion_value = MOTION_EFFECTS[motion]
                 output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
                 st.session_state.output_path = output_path
@@ -463,6 +498,8 @@ with tab_script:
     with col2:
         duration = st.slider("Duration (min)", min_value=0.5, max_value=10.0, value=DEFAULT_DURATION_MINUTES, step=0.5, key="script_duration")
 
+    video_idea = st.text_input("Video Idea (optional)", key="script_video_idea", placeholder="e.g., Focus on layer 2 solutions", help="Optional: specific angle or focus for the video.")
+
     num_scenes = calculate_scenes(duration, density)
     st.caption(f"~{num_scenes} scenes | Model: {llm_model} | Density: {density}")
 
@@ -472,7 +509,17 @@ with tab_script:
             research_context = ""
             if research:
                 research_context = research_topic(topic, model=llm_model)
-            result = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, run_dir=run_dir)
+            target_duration_seconds = duration * 60
+            result = generate_script(
+                topic,
+                num_scenes,
+                model=llm_model,
+                theme=theme,
+                research_context=research_context,
+                target_duration_seconds=target_duration_seconds,
+                video_idea=video_idea,
+                run_dir=run_dir,
+            )
             st.success(f"Script saved to: `{run_dir / 'script.json'}`")
             st.json(result)
 
