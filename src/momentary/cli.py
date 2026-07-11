@@ -13,6 +13,7 @@ from momentary.config import (
     DEFAULT_AUDIO_MODE,
     DEFAULT_THEME,
     DEFAULT_IMAGE_DENSITY,
+    DEFAULT_RESEARCH,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
@@ -65,7 +66,7 @@ def generate(
     motion: str = typer.Option(DEFAULT_MOTION, "--motion", "-m", help=f"Motion effect: {', '.join(MOTION_EFFECTS.keys())}"),
     audio_mode: str = typer.Option(DEFAULT_AUDIO_MODE, "--audio-mode", help=f"Audio mode: {', '.join(AUDIO_MODES.keys())}"),
     theme: str = typer.Option(DEFAULT_THEME, "--theme", "-t", help=f"Narration theme: {', '.join(NARRATION_THEMES.keys())}"),
-    research: bool = typer.Option(True, "--research/--no-research", help="Research topic before writing script"),
+    research: bool = typer.Option(DEFAULT_RESEARCH, "--research/--no-research", help="Research topic before writing script"),
     llm_model: str = typer.Option(None, "--llm-model", help="OpenRouter model (default: from .env)"),
     image_model: str = typer.Option(None, "--image-model", help="Fal.ai image model (default: from .env)"),
     voice_model: str = typer.Option(None, "--voice-model", help="ElevenLabs TTS model (default: from .env)"),
@@ -115,14 +116,18 @@ def generate(
     console.print(f"  Generated {len(image_paths)} images")
 
     console.print(f"\n[bold][{'4' if research else '3'}/5] Generating voice narration...[/bold]")
-    if audio_mode == "single_audio":
-        full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, run_dir=run_dir)
-        boundaries = timestamp_data["boundaries"]
-        audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
-        console.print(f"  Generated single audio, split into {len(audio_paths)} clips")
-    else:
-        audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
-        console.print(f"  Generated {len(audio_paths)} audio clips")
+    try:
+        if audio_mode == "Single Audio":
+            full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, run_dir=run_dir)
+            boundaries = timestamp_data["boundaries"]
+            audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
+            console.print(f"  Generated single audio, split into {len(audio_paths)} clips")
+        else:
+            audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
+            console.print(f"  Generated {len(audio_paths)} audio clips")
+    except Exception as e:
+        console.print(f"  [bold red]ERROR:[/bold red] Voice generation failed: {e}")
+        raise
 
     console.print(f"\n[bold][{'5' if research else '4'}/5] Assembling video...[/bold]")
     output_path = assemble_video(image_paths, audio_paths, title, motion=motion.lower().replace(" ", "_"), run_dir=run_dir)
@@ -136,7 +141,7 @@ def script(
     video_idea: str = typer.Option("", "--idea", "-i", help="Optional: specific angle or focus for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target duration in minutes"),
     theme: str = typer.Option(DEFAULT_THEME, "--theme", "-t", help=f"Narration theme: {', '.join(NARRATION_THEMES.keys())}"),
-    research: bool = typer.Option(True, "--research/--no-research", help="Research topic before writing script"),
+    research: bool = typer.Option(DEFAULT_RESEARCH, "--research/--no-research", help="Research topic before writing script"),
     model: str = typer.Option(None, "--model", "-m", help="OpenRouter model (default: from .env)"),
     output: Path = typer.Option(None, "--output", "-o", help="Save script to file"),
 ):

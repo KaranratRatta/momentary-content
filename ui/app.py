@@ -15,6 +15,7 @@ from momentary.config import (
     DEFAULT_AUDIO_MODE,
     DEFAULT_THEME,
     DEFAULT_IMAGE_DENSITY,
+    DEFAULT_RESEARCH,
     calculate_scenes,
     create_run_directory,
     OPENROUTER_MODELS,
@@ -167,11 +168,25 @@ st.markdown("""
     section[data-testid="stSidebar"] {
         background: rgba(15, 15, 26, 0.95);
         border-right: 1px solid rgba(255,255,255,0.1);
+        overflow-y: auto !important;
+        padding-bottom: 10rem !important;
     }
     section[data-testid="stSidebar"] .stSelectbox > div > div > div {
         background: rgba(255,255,255,0.08);
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 8px;
+    }
+    [data-baseweb="popover"] {
+        max-height: 400px !important;
+        overflow-y: auto !important;
+    }
+    [data-baseweb="popover"] ul[role="listbox"] {
+        max-height: 380px !important;
+        overflow-y: auto !important;
+    }
+    [data-baseweb="menu"] {
+        max-height: 400px !important;
+        overflow-y: auto !important;
     }
     section[data-testid="stSidebar"] h3 {
         color: #e0e0ff;
@@ -241,7 +256,7 @@ with st.sidebar:
         index=list(NARRATION_THEMES.keys()).index(DEFAULT_THEME),
     )
 
-    research = st.checkbox("Research topic before script", value=True)
+    research = st.checkbox("Research topic before script", value=DEFAULT_RESEARCH)
 
     st.subheader("Image Generation")
     image_model = st.selectbox(
@@ -443,17 +458,23 @@ with tab_pipeline:
         if st.session_state.generation_step == voice_step:
             st.session_state.generation_step = voice_step + 1
             with st.spinner("Generating voice narration..."):
-                scenes = st.session_state.scenes
-                if audio_mode == "Single Audio":
-                    full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
-                    boundaries = timestamp_data["boundaries"]
-                    audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
-                    st.session_state.audio_paths = audio_paths
-                    st.success(f"Generated single audio, split into {len(audio_paths)} clips")
-                else:
-                    audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
-                    st.session_state.audio_paths = audio_paths
-                    st.success(f"Generated {len(audio_paths)} audio clips")
+                try:
+                    scenes = st.session_state.scenes
+                    if audio_mode == "Single Audio":
+                        full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
+                        boundaries = timestamp_data["boundaries"]
+                        audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
+                        st.session_state.audio_paths = audio_paths
+                        st.success(f"Generated single audio, split into {len(audio_paths)} clips")
+                    else:
+                        audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
+                        st.session_state.audio_paths = audio_paths
+                        st.success(f"Generated {len(audio_paths)} audio clips")
+                except Exception as e:
+                    st.error(f"Voice generation failed: {e}")
+                    st.session_state.generating = False
+                    st.session_state.generation_step = 0
+                    st.stop()
             st.rerun()
 
         assemble_step = voice_step + 1

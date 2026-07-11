@@ -49,14 +49,26 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
     full_narration = " ".join(scene["narration"] for scene in scenes)
 
     print(f"  Generating single audio for {len(scenes)} scenes...")
-    result = client.text_to_speech.convert_with_timestamps(
-        voice_id=voice_id or ELEVENLABS_VOICE_ID,
-        text=full_narration,
-        model_id=model or ELEVENLABS_MODEL,
-        output_format="mp3_44100_128",
-    )
+    print(f"  Total narration length: {len(full_narration)} characters")
+    
+    try:
+        result = client.text_to_speech.convert_with_timestamps(
+            voice_id=voice_id or ELEVENLABS_VOICE_ID,
+            text=full_narration,
+            model_id=model or ELEVENLABS_MODEL,
+            output_format="mp3_44100_128",
+        )
+        print(f"  API call completed, processing audio data...")
+    except Exception as e:
+        print(f"  ERROR: ElevenLabs API call failed: {e}")
+        raise
 
-    audio_data = base64.b64decode(result.audio_base_64)
+    try:
+        audio_data = base64.b64decode(result.audio_base_64)
+        print(f"  Audio data decoded: {len(audio_data)} bytes")
+    except Exception as e:
+        print(f"  ERROR: Failed to decode audio data: {e}")
+        raise
 
     if run_dir:
         audio_dir = run_dir / "audio"
@@ -67,11 +79,13 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
     output_path = audio_dir / "full_audio.mp3"
     with open(output_path, "wb") as f:
         f.write(audio_data)
+    print(f"  Saved full audio to: {output_path}")
 
     alignment = result.alignment
     scene_boundaries = []
 
     if alignment and alignment.characters:
+        print(f"  Processing {len(alignment.characters)} character timestamps...")
         characters = alignment.characters
         start_times = alignment.character_start_times_seconds
         end_times = alignment.character_end_times_seconds
@@ -109,7 +123,17 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
                 "start": scene_start,
                 "end": scene_end,
             })
+        print(f"  Created {len(scene_boundaries)} scene boundaries")
+    else:
+        print(f"  WARNING: No alignment data received, using fallback boundaries")
+        for i in range(len(scenes)):
+            scene_boundaries.append({
+                "scene_index": i,
+                "start": i * 5.0,
+                "end": (i + 1) * 5.0,
+            })
 
+    print(f"  Audio generation complete")
     return str(output_path), {"boundaries": scene_boundaries}
 
 

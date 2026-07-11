@@ -23,6 +23,13 @@ NOTE: You do NOT need to use all the facts above. Select only the most relevant 
 
 TARGET DURATION: The full video should be approximately {target_duration_seconds} seconds ({target_duration_seconds/60:.1f} minutes).
 With {num_scenes} scenes, each scene's narration should be roughly {avg_per_scene:.0f} seconds when spoken aloud.
+
+FLEXIBLE SCENE SPLITTING: You can split narration flexibly across scenes:
+- One sentence can span multiple scenes (e.g., 1 sentence across 2-3 images for emphasis)
+- Multiple sentences can share a scene (e.g., 4 sentences in 1 image if they're related)
+- Adjust the split based on visual interest and pacing, not just sentence boundaries
+- Focus on creating visually distinct moments that match the narration flow
+
 Write naturally, but keep this pacing in mind. Good narration quality is more important than hitting exact timing."""
 
     idea_section = ""
@@ -42,9 +49,16 @@ NARRATION STYLE: {theme_description}
 Write a script with exactly {num_scenes} scenes{duration_phrase} about the given topic.{research_section}{duration_section}{idea_section}
 
 Each scene should have:
-- narration: Natural, engaging narration. Write quality content - don't sacrifice writing quality for brevity. Let the narration flow naturally.
+- narration: The portion of narration for this specific image/scene. Can be a fragment, one sentence, or multiple sentences depending on visual pacing.
 - image_prompt: a detailed visual description for generating an illustration
 - duration_hint: estimated seconds for this scene based on narration length
+
+SCENE SPLITTING GUIDELINES:
+- Split narration based on visual moments, not just sentence boundaries
+- A single sentence can span 2-3 scenes if it describes multiple visual elements
+- Related sentences can share one scene if they describe the same visual moment
+- Each scene should represent a distinct visual that the viewer can see
+- Aim for variety: some quick cuts (short narration per scene), some lingering moments (longer narration per scene)
 
 IMPORTANT IMAGE PROMPT GUIDELINES:
 - Human characters: simple stick figures with round white heads and dot eyes
