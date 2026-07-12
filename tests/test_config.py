@@ -1,6 +1,7 @@
 """Tests for config consistency and UI selectbox logic."""
 
 import pytest
+from pathlib import Path
 from momentary.config import (
     STYLE_PROMPTS,
     DEFAULT_STYLE,
@@ -12,6 +13,8 @@ from momentary.config import (
     ELEVENLABS_VOICE_ID,
     NARRATION_THEMES,
     DEFAULT_THEME,
+    get_next_run_number,
+    save_run_config,
 )
 
 
@@ -110,3 +113,42 @@ def test_style_prompts_contain_anti_ai_keywords():
         assert has_keyword, (
             f"Style '{style_name}' missing anti-AI keywords. Prompt: {prompt[:100]}..."
         )
+
+
+def test_get_next_run_number_returns_int():
+    """get_next_run_number should return an integer."""
+    result = get_next_run_number()
+    assert isinstance(result, int), "Should return an integer"
+    assert result >= 1, "Should return at least 1"
+
+
+def test_get_next_run_number_increments(tmp_path):
+    """get_next_run_number should increment when new folders are created."""
+    import momentary.config as config
+    original_runs_dir = config.RUNS_DIR
+    config.RUNS_DIR = tmp_path
+    
+    try:
+        num1 = config.get_next_run_number()
+        
+        (tmp_path / f"{num1}_test_20240101_120000").mkdir()
+        
+        num2 = config.get_next_run_number()
+        assert num2 == num1 + 1, "Should increment after folder creation"
+    finally:
+        config.RUNS_DIR = original_runs_dir
+
+
+def test_save_run_config_creates_file(tmp_path):
+    """save_run_config should create config.json in run_dir."""
+    config = {"topic": "test", "duration": 2.0}
+    save_run_config(tmp_path, config)
+    
+    config_path = tmp_path / "config.json"
+    assert config_path.exists(), "config.json should be created"
+    
+    import json
+    with open(config_path) as f:
+        loaded = json.load(f)
+    
+    assert loaded == config, "Config should match saved data"

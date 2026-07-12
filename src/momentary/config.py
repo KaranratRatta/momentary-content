@@ -101,13 +101,35 @@ def sanitize_topic(topic: str) -> str:
 
 
 def create_run_directory(topic: str) -> Path:
+    run_number = get_next_run_number()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder_name = f"{sanitize_topic(topic)}_{timestamp}"
+    folder_name = f"{run_number:03d}_{sanitize_topic(topic)}_{timestamp}"
     run_dir = RUNS_DIR / folder_name
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "images").mkdir(exist_ok=True)
     (run_dir / "audio").mkdir(exist_ok=True)
     return run_dir
+
+
+def get_next_run_number() -> int:
+    if not RUNS_DIR.exists():
+        return 1
+    
+    max_num = 0
+    for folder in RUNS_DIR.iterdir():
+        if folder.is_dir():
+            parts = folder.name.split("_")
+            if parts and parts[0].isdigit():
+                max_num = max(max_num, int(parts[0]))
+    
+    return max_num + 1
+
+
+def save_run_config(run_dir: Path, config: dict):
+    import json
+    config_path = run_dir / "config.json"
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
 
 
 CARTOON_STYLE_PROMPT = (
@@ -160,7 +182,8 @@ LAZY_DOODLE_STYLE_PROMPT = (
     "lazy hand-drawn doodle, "
     "very wobbly imperfect shaky lines like quick sketch on napkin, "
     "flat color background, "
-    "human characters as simple stick figures with round white heads and dot eyes, "
+    "human characters as simple stick figures with round white heads, "
+    "eyes that match the emotion (dots for neutral, closed lines for sleep, wide circles for surprise, upward curves for happy), "
     "minimal or no lighting/shadows/depth depends on the scene, "
     "crude casual linework with visible hand tremor, "
     "flat colors with no shading or highlights, "

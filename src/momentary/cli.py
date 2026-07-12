@@ -16,6 +16,7 @@ from momentary.config import (
     DEFAULT_RESEARCH,
     calculate_scenes,
     create_run_directory,
+    save_run_config,
     OPENROUTER_MODELS,
     FAL_IMAGE_MODELS,
     ELEVENLABS_MODELS,
@@ -93,6 +94,22 @@ def generate(
         console.print(f"  Voice Model: [bold]{voice_model}[/bold]")
 
     run_dir = create_run_directory(topic)
+    
+    run_config = {
+        "topic": topic,
+        "video_idea": video_idea,
+        "duration": duration,
+        "density": density,
+        "motion": motion,
+        "audio_mode": audio_mode,
+        "theme": theme,
+        "research": research,
+        "llm_model": llm_model or OPENROUTER_MODEL,
+        "image_model": image_model or FAL_IMAGE_MODEL,
+        "voice_model": voice_model or ELEVENLABS_MODEL,
+    }
+    save_run_config(run_dir, run_config)
+    
     console.print(f"  Run directory: [bold]{run_dir}[/bold]")
 
     research_context = ""

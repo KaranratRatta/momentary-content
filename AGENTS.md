@@ -6,6 +6,10 @@ This document provides instructions for AI agents working on the momentary-conte
 
 - **Do NOT push code to git.** The user will push code themselves. Only commit locally if asked.
 - **Always update both UI and CLI together.** When adding a new parameter, option, or feature, you MUST update both `src/momentary/cli.py` AND `ui/app.py`. The CLI uses Typer and the UI uses Streamlit — they are separate entry points that call the same underlying functions. Forgetting to update one of them causes bugs where the UI passes `None` for parameters the CLI correctly passes. Always check both files when making changes.
+- **Always update tests.** When adding new features, functions, or changing behavior, you MUST add or update corresponding tests in the `tests/` directory. Run `uv run pytest` to verify all tests pass.
+- **Always update config.py for new constants.** When adding new styles, modes, themes, or configuration options, add them to `config.py` with proper constants and update any related dictionaries (STYLE_PROMPTS, AUDIO_MODES, NARRATION_THEMES, etc.).
+- **Always update run config saving.** When adding new parameters to the generate command, update the `run_config` dictionary in both `cli.py` and `ui/app.py` so all settings are saved to `config.json` in each run folder.
+- **Always update console/UI output.** When adding new pipeline steps (like thumbnail generation), update the progress messages in both CLI (using Rich console.print) and UI (using st.spinner/st.success).
 
 ## Project Overview
 
@@ -37,16 +41,26 @@ momentary-content/
 │       ├── image_generator.py  # Fal.ai → PNG images
 │       ├── voice_generator.py  # ElevenLabs → MP3 audio
 │       └── video_assembler.py  # MoviePy → MP4 video
+├── tests/                      # Pytest test suite
+│   ├── test_config.py          # Config consistency tests
+│   ├── test_script_generator.py
+│   ├── test_image_generator.py
+│   ├── test_voice_generator.py
+│   └── test_video_assembler.py
 ├── ui/
 │   └── app.py                  # Streamlit web interface
 ├── runs/                       # Permanent run directories
-│   ── topic_timestamp/
+│   ── {run_number}_{topic}_{timestamp}/
+│       ├── config.json         # All generation settings
 │       ├── script.json
+│       ├── description.txt     # YouTube description
+│       ├── thumbnail.png       # Video thumbnail
 │       ├── images/
 │       ├── audio/
+│       │   └── boundaries.json # Audio split timestamps
 │       └── video.mp4
 ├── .env                        # API keys (gitignored)
-── .env.example                # Template
+└── .env.example                # Template
 ```
 
 ## Code Conventions
@@ -144,6 +158,7 @@ By default, the system researches the topic before writing the script. This prov
 
 - **Per Scene**: Generates separate audio clip for each scene. Precise sync but may sound disjointed.
 - **Single Audio** (default): Generates one continuous audio track using ElevenLabs timestamps, then splits at scene boundaries. More natural flow with better voice continuity.
+- **Chunked Audio**: Splits long narration into chunks, generates audio for each chunk, then combines. Handles long texts better.
 
 ## Key Design Decisions
 
@@ -151,10 +166,9 @@ By default, the system researches the topic before writing the script. This prov
 All image prompts automatically append a style-specific prompt from `config.py` to maintain consistent visual style. Style prompts include:
 - Anti-AI keywords to reduce glossy/perfect AI appearance
 - Texture and imperfection guidance for hand-drawn feel
-- Specific guidance that animals are drawn with detail (not stick figures)
 - Human characters remain simple stick figures
 
-Available styles: Cartoon Stick Figure, Anime, Realistic, Storybook
+Available styles: Lazy Doodle (default), Cartoon Stick Figure, Anime, Realistic, Storybook
 
 ### Ken Burns Effect
 Random effect per scene: zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, or static. Applied via Pillow + NumPy frame-by-frame rendering in MoviePy.
@@ -167,6 +181,16 @@ Uses ElevenLabs `convert_with_timestamps` API to get character-level timing data
 
 ### Research Step
 Before script generation, the system researches the topic to gather facts and interesting angles. This research is passed to the script generator as context, resulting in more accurate and engaging content.
+
+### Script Generation
+The script generator creates:
+- **Hook structure**: First 1-2 scenes tease the payoff without revealing it
+- **Spoken English**: Conversational tone with contractions, casual transitions
+- **Description**: YouTube description with hook and hashtags
+- **Thumbnail prompt**: Eye-catching thumbnail description in same style
+
+### Run Directory Naming
+Run folders follow the format: `{run_number:03d}_{topic}_{timestamp}` (e.g., `020_my_topic_20260713_120000`). The run number is auto-incremented based on existing folders.
 
 ### Transitions
 0.5s crossfade between scenes using MoviePy's `crossfadein`/`crossfadeout`.
@@ -202,10 +226,61 @@ Change `OPENROUTER_MODEL` in `.env`. Any OpenAI-compatible model on OpenRouter w
 ### More/Fewer Scenes
 Change `NUM_SCENES` in `config.py`.
 
+## Change Checklist
+
+When making changes to the codebase, ALWAYS check these items:
+
+### Adding a new parameter/option to generate command:
+- [ ] Update `cli.py` - Add Typer option, pass to functions, add to `run_config` dict
+- [ ] Update `ui/app.py` - Add Streamlit widget, pass to functions, add to `run_config` dict
+- [ ] Update `config.py` - Add default constant if needed
+- [ ] Update tests - Add test for new parameter handling
+- [ ] Run `uv run pytest` - Verify all tests pass
+
+### Adding a new style/mode/theme:
+- [ ] Update `config.py` - Add constant (e.g., `NEW_STYLE_PROMPT`)
+- [ ] Update `config.py` - Add to dictionary (e.g., `STYLE_PROMPTS["New Style"]`)
+- [ ] Update `config.py` - Update `DEFAULT_*` if making it the default
+- [ ] Update tests - Add test for new style in dictionary
+- [ ] Run `uv run pytest` - Verify all tests pass
+
+### Adding a new pipeline step (e.g., thumbnail generation):
+- [ ] Update `cli.py` - Add step with console.print progress message
+- [ ] Update `ui/app.py` - Add step with st.spinner/st.success message
+- [ ] Update `ui/app.py` - Add step to generation steps list
+- [ ] Update tests if adding new functions
+- [ ] Run `uv run pytest` - Verify all tests pass
+
+### Modifying script JSON structure:
+- [ ] Update `script_generator.py` - Update prompt and JSON format
+- [ ] Update `cli.py` - Handle new fields from script
+- [ ] Update `ui/app.py` - Handle new fields from script
+- [ ] Update tests - Add test for new JSON fields in prompt
+- [ ] Run `uv run pytest` - Verify all tests pass
+
+### General rule:
+- [ ] Search for all usages of changed functions/constants
+- [ ] Update both CLI and UI together
+- [ ] Add/update tests for new behavior
+- [ ] Run `uv run pytest` before finishing
+
 ## Testing
 
-No formal test suite exists. Manual testing via CLI:
+Run the test suite with:
+```bash
+uv run pytest
+```
 
+The test suite includes:
+- `test_config.py` - Config consistency and run number logic
+- `test_script_generator.py` - Script generation prompts and JSON format
+- `test_image_generator.py` - Image generation and thumbnail functions
+- `test_voice_generator.py` - Audio splitting and chunking
+- `test_video_assembler.py` - Video assembly and motion effects
+
+When adding new features, always add corresponding tests. Run tests after making changes to ensure nothing breaks.
+
+Manual testing via CLI:
 ```bash
 # Test each component separately
 uv run momentary script "Test topic"
