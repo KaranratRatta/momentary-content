@@ -46,6 +46,14 @@ The style is casual and engaging, similar to channels like Kurzgesagt, Vsauce, o
 
 NARRATION STYLE: {theme_description}
 
+HOOK STRUCTURE: The first 1-2 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching.
+
+SPOKEN ENGLISH: Write like you're talking to a friend, not writing an essay. Use:
+- Contractions (it's, you'll, don't, there's)
+- Short, punchy sentences mixed with longer ones
+- Conversational tone, not formal academic language
+- Rhetorical questions to engage the viewer
+
 Write a script with exactly {num_scenes} scenes{duration_phrase} about the given topic.{research_section}{duration_section}{idea_section}
 
 Each scene should have:
