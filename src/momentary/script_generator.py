@@ -29,6 +29,7 @@ FLEXIBLE SCENE SPLITTING: You can split narration flexibly across scenes:
 - Multiple sentences can share a scene (e.g., 4 sentences in 1 image if they're related)
 - Adjust the split based on visual interest and pacing, not just sentence boundaries
 - Focus on creating visually distinct moments that match the narration flow
+- Aim for variety: some quick cuts (short narration per scene), some lingering moments (longer narration per scene)
 
 Write naturally, but keep this pacing in mind. Good narration quality is more important than hitting exact timing."""
 
@@ -60,13 +61,6 @@ Each scene should have:
 - narration: The portion of narration for this specific image/scene. Can be a fragment, one sentence, or multiple sentences depending on visual pacing.
 - image_prompt: a detailed visual description for generating an illustration
 - duration_hint: estimated seconds for this scene based on narration length
-
-SCENE SPLITTING GUIDELINES:
-- Split narration based on visual moments, not just sentence boundaries
-- A single sentence can span 2-3 scenes if it describes multiple visual elements
-- Related sentences can share one scene if they describe the same visual moment
-- Each scene should represent a distinct visual that the viewer can see
-- Aim for variety: some quick cuts (short narration per scene), some lingering moments (longer narration per scene)
 
 IMPORTANT IMAGE PROMPT GUIDELINES:
 - Human characters: simple stick figures with round white heads and dot eyes
