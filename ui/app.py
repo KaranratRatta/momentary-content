@@ -465,12 +465,14 @@ with tab_pipeline:
                     if audio_mode == "Single Audio":
                         full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
                         boundaries = timestamp_data["boundaries"]
+                        st.info("Splitting audio into scenes...")
                         audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
                         st.session_state.audio_paths = audio_paths
                         st.success(f"Generated single audio, split into {len(audio_paths)} clips")
                     elif audio_mode == "Chunked Audio":
                         full_audio_path, timestamp_data = generate_chunked_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
                         boundaries = timestamp_data["boundaries"]
+                        st.info("Splitting audio into scenes...")
                         audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
                         st.session_state.audio_paths = audio_paths
                         st.success(f"Generated chunked audio, split into {len(audio_paths)} clips")
@@ -488,7 +490,7 @@ with tab_pipeline:
         assemble_step = voice_step + 1
         if st.session_state.generation_step == assemble_step:
             st.session_state.generation_step = assemble_step + 1
-            with st.spinner("Assembling video..."):
+            with st.spinner("Assembling video... (this may take a minute)"):
                 image_paths = st.session_state.image_paths
                 audio_paths = st.session_state.audio_paths
                 title = st.session_state.title
@@ -499,12 +501,17 @@ with tab_pipeline:
                     st.session_state.generation_step = 0
                     st.rerun()
 
-                motion_value = MOTION_EFFECTS[motion]
-                output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
-                st.session_state.output_path = output_path
-                st.session_state.generating = False
-                st.session_state.generation_step = 0
-                st.success(f"Video saved: {output_path}")
+                try:
+                    motion_value = MOTION_EFFECTS[motion]
+                    output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
+                    st.session_state.output_path = output_path
+                    st.session_state.generating = False
+                    st.session_state.generation_step = 0
+                    st.success(f"Video saved: {output_path}")
+                except Exception as e:
+                    st.error(f"Video assembly failed: {e}")
+                    st.session_state.generating = False
+                    st.session_state.generation_step = 0
             st.rerun()
 
     if "output_path" in st.session_state and st.session_state.output_path:
