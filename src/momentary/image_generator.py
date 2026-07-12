@@ -1,13 +1,32 @@
 import requests
 import fal_client
 from pathlib import Path
-from momentary.config import FAL_IMAGE_MODEL, STYLE_PROMPTS, DEFAULT_STYLE, VIDEO_WIDTH, VIDEO_HEIGHT
+from momentary.config import FAL_IMAGE_MODEL, STYLE_PROMPTS, DEFAULT_STYLE, VIDEO_WIDTH, VIDEO_HEIGHT, ANIMAL_GUIDANCE
+
+
+ANIMAL_KEYWORDS = [
+    "animal", "dog", "cat", "bird", "fish", "horse", "cow", "pig", "sheep", "goat",
+    "chicken", "duck", "rabbit", "mouse", "rat", "lion", "tiger", "bear", "elephant",
+    "monkey", "ape", "gorilla", "snake", "lizard", "frog", "turtle", "whale", "dolphin",
+    "shark", "octopus", "spider", "insect", "butterfly", "bee", "ant", "pet", "wildlife"
+]
+
+
+def _contains_animals(prompt: str) -> bool:
+    prompt_lower = prompt.lower()
+    return any(keyword in prompt_lower for keyword in ANIMAL_KEYWORDS)
 
 
 def generate_image(scene_prompt: str, scene_index: int, model: str | None = None, style: str | None = None, run_dir: Path | None = None) -> str:
     style_name = style or DEFAULT_STYLE
     style_prompt = STYLE_PROMPTS.get(style_name, STYLE_PROMPTS[DEFAULT_STYLE])
+    
     full_prompt = f"{scene_prompt}, {style_prompt}"
+    
+    if _contains_animals(scene_prompt):
+        animal_guidance = ANIMAL_GUIDANCE.get(style_name, ANIMAL_GUIDANCE.get(DEFAULT_STYLE))
+        if animal_guidance:
+            full_prompt = f"{full_prompt}, {animal_guidance}"
 
     result = fal_client.subscribe(
         model or FAL_IMAGE_MODEL,

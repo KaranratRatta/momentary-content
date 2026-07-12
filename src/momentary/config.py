@@ -115,7 +115,6 @@ CARTOON_STYLE_PROMPT = (
     "slightly wobbly imperfect lines like actual hand drawing, "
     "organic textured paper background with subtle grain, "
     "human characters as simple stick figures with round white heads and dot eyes, "
-    "animals drawn with more detail and personality, not stick figures, "
     "warm earthy color palette with slight color bleeding at edges, "
     "visible pencil or ink texture in the linework, "
     "slight asymmetry and natural imperfections, "
@@ -125,28 +124,32 @@ CARTOON_STYLE_PROMPT = (
     "no photorealism, no 3D rendering"
 )
 
+CARTOON_ANIMAL_GUIDANCE = "animals drawn with more detail and personality, not stick figures"
+
 ANIME_STYLE_PROMPT = (
     "anime illustration style with hand-drawn feel, "
     "slight line weight variation like actual pen work, "
     "textured background with subtle noise, "
     "expressive character design with detailed eyes, "
-    "animals drawn with full anime detail and personality, "
     "vibrant colors with slight color bleeding, "
     "dynamic composition with natural imperfections, "
     "emotional atmospheric lighting, "
     "no glossy AI perfection, no plastic smoothness"
 )
 
+ANIME_ANIMAL_GUIDANCE = "animals drawn with full anime detail and personality"
+
 REALISTIC_STYLE_PROMPT = (
     "cinematic digital painting with photographic quality, "
     "film grain texture overlay, "
     "natural lighting with realistic shadows and highlights, "
     "detailed textures on surfaces and materials, "
-    "animals rendered with full realistic detail, "
     "slight depth of field blur on background elements, "
     "color grading like professional film, "
     "no AI artifacts, no oversharpening, no plastic skin"
 )
+
+REALISTIC_ANIMAL_GUIDANCE = "animals rendered with full realistic detail"
 
 STORYBOOK_STYLE_PROMPT = (
     "classic children's book illustration, "
@@ -154,17 +157,25 @@ STORYBOOK_STYLE_PROMPT = (
     "visible brush strokes and paper texture, "
     "soft warm color palette with slight color bleeding, "
     "whimsical hand-drawn characters with personality, "
-    "animals drawn with charming detail and expression, "
     "cozy atmospheric lighting, "
     "slight imperfections that show it's hand-made, "
     "no digital perfection, no glossy AI look"
 )
+
+STORYBOOK_ANIMAL_GUIDANCE = "animals drawn with charming detail and expression"
 
 STYLE_PROMPTS = {
     "Cartoon Stick Figure": CARTOON_STYLE_PROMPT,
     "Anime": ANIME_STYLE_PROMPT,
     "Realistic": REALISTIC_STYLE_PROMPT,
     "Storybook": STORYBOOK_STYLE_PROMPT,
+}
+
+ANIMAL_GUIDANCE = {
+    "Cartoon Stick Figure": CARTOON_ANIMAL_GUIDANCE,
+    "Anime": ANIME_ANIMAL_GUIDANCE,
+    "Realistic": REALISTIC_ANIMAL_GUIDANCE,
+    "Storybook": STORYBOOK_ANIMAL_GUIDANCE,
 }
 
 DEFAULT_STYLE = "Cartoon Stick Figure"
