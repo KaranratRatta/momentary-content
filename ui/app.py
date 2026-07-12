@@ -352,8 +352,8 @@ if missing:
     st.stop()
 
 
-tab_pipeline, tab_script, tab_image, tab_voice, tab_assemble, tab_runs, tab_status = st.tabs(
-    ["Full Pipeline", "Test Script", "Test Image", "Test Voice", "Test Assemble", "Runs", "Status"]
+tab_pipeline, tab_script, tab_image, tab_voice, tab_test_split, tab_assemble, tab_runs, tab_status = st.tabs(
+    ["Full Pipeline", "Test Script", "Test Image", "Test Voice", "Test Split", "Test Assemble", "Runs", "Status"]
 )
 
 
@@ -655,6 +655,63 @@ with tab_assemble:
                     output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
                     st.success(f"Video saved: {output_path}")
                     st.video(output_path)
+    else:
+        st.info("No runs available. Generate a video first.")
+
+
+with tab_test_split:
+    st.header("Test Audio Splitting")
+    st.caption("Test audio splitting on an existing run with full_audio.mp3")
+
+    if RUNS_DIR.exists():
+        runs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()], reverse=True)
+        run_options = [r.name for r in runs]
+        selected_run = st.selectbox("Select Run", options=run_options, key="split_run")
+
+        if selected_run:
+            run_dir = RUNS_DIR / selected_run
+            full_audio_path = run_dir / "audio" / "full_audio.mp3"
+            script_path = run_dir / "script.json"
+
+            if full_audio_path.exists():
+                st.success(f"Found: {full_audio_path.name}")
+            else:
+                st.error("No full_audio.mp3 found in this run")
+
+            if script_path.exists():
+                with open(script_path) as f:
+                    script = json.load(f)
+                scenes = script.get("scenes", [])
+                st.metric("Scenes in script", len(scenes))
+            else:
+                st.error("No script.json found in this run")
+                scenes = []
+
+            if st.button("Test Split Audio", disabled=not full_audio_path.exists() or not scenes):
+                try:
+                    boundaries_path = run_dir / "audio" / "boundaries.json"
+                    if boundaries_path.exists():
+                        with open(boundaries_path) as f:
+                            boundaries = json.load(f)
+                        st.info(f"Loaded {len(boundaries)} saved boundaries from boundaries.json")
+                    else:
+                        st.warning("No saved boundaries found, using dummy 5s intervals")
+                        boundaries = []
+                        for i, scene in enumerate(scenes):
+                            boundaries.append({
+                                "scene_index": i,
+                                "start": i * 5.0,
+                                "end": (i + 1) * 5.0,
+                            })
+
+                    with st.spinner("Splitting audio..."):
+                        audio_paths = split_audio_by_boundaries(str(full_audio_path), boundaries, run_dir=run_dir)
+                        st.success(f"Successfully split into {len(audio_paths)} audio clips")
+                        
+                        for path in audio_paths:
+                            st.write(f"- {Path(path).name}")
+                except Exception as e:
+                    st.error(f"Error splitting audio: {e}")
     else:
         st.info("No runs available. Generate a video first.")
 

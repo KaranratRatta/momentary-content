@@ -252,6 +252,59 @@ def assemble(
 
 
 @app.command()
+def test_split(
+    run_dir: Path = typer.Argument(help="Path to run directory with full_audio.mp3"),
+):
+    """Test audio splitting on an existing run."""
+    full_audio_path = run_dir / "audio" / "full_audio.mp3"
+    
+    if not full_audio_path.exists():
+        console.print(f"[red]No full_audio.mp3 found in {run_dir / 'audio'}[/red]")
+        raise typer.Exit(1)
+    
+    script_path = run_dir / "script.json"
+    if not script_path.exists():
+        console.print(f"[red]No script.json found in {run_dir}[/red]")
+        raise typer.Exit(1)
+    
+    import json
+    with open(script_path) as f:
+        script = json.load(f)
+    
+    scenes = script.get("scenes", [])
+    if not scenes:
+        console.print("[red]No scenes found in script.json[/red]")
+        raise typer.Exit(1)
+    
+    console.print(f"[bold]Testing audio split for {len(scenes)} scenes...[/bold]")
+    console.print(f"  Audio file: {full_audio_path}")
+    
+    boundaries_path = run_dir / "audio" / "boundaries.json"
+    if boundaries_path.exists():
+        with open(boundaries_path) as f:
+            boundaries = json.load(f)
+        console.print(f"[green]Loaded {len(boundaries)} saved boundaries from boundaries.json[/green]")
+    else:
+        console.print(f"[yellow]No saved boundaries found, using dummy 5s intervals[/yellow]")
+        boundaries = []
+        for i, scene in enumerate(scenes):
+            boundaries.append({
+                "scene_index": i,
+                "start": i * 5.0,
+                "end": (i + 1) * 5.0,
+            })
+    
+    try:
+        audio_paths = split_audio_by_boundaries(str(full_audio_path), boundaries, run_dir=run_dir)
+        console.print(f"[green]Successfully split into {len(audio_paths)} audio clips[/green]")
+        for path in audio_paths:
+            console.print(f"  - {Path(path).name}")
+    except Exception as e:
+        console.print(f"[red]Error splitting audio: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
 def status():
     """Check API key configuration and runs."""
     console.print(Panel("API Key Status", border_style="cyan"))

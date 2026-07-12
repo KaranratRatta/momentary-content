@@ -1,4 +1,5 @@
 import base64
+import json
 import re
 from pathlib import Path
 from elevenlabs import ElevenLabs
@@ -6,12 +7,18 @@ from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS
 
 
 def _split_text_into_chunks(text: str, target_words: int = 175) -> list[str]:
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    if not text or not text.strip():
+        return []
+    
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     chunks = []
     current_chunk = []
     current_word_count = 0
     
     for sentence in sentences:
+        if not sentence.strip():
+            continue
+            
         sentence_word_count = len(sentence.split())
         
         if current_word_count + sentence_word_count > target_words and current_chunk:
@@ -157,6 +164,12 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
                 "end": (i + 1) * 5.0,
             })
 
+    if run_dir:
+        boundaries_path = run_dir / "audio" / "boundaries.json"
+        with open(boundaries_path, "w") as f:
+            json.dump(scene_boundaries, f, indent=2)
+        print(f"  Saved boundaries to: {boundaries_path}")
+
     print(f"  Audio generation complete")
     return str(output_path), {"boundaries": scene_boundaries}
 
@@ -283,6 +296,12 @@ def generate_chunked_audio(scenes: list, model: str | None = None, voice_id: str
                 "end": (i + 1) * 5.0,
             })
     
+    if run_dir:
+        boundaries_path = run_dir / "audio" / "boundaries.json"
+        with open(boundaries_path, "w") as f:
+            json.dump(scene_boundaries, f, indent=2)
+        print(f"  Saved boundaries to: {boundaries_path}")
+
     print(f"  Chunked audio generation complete")
     return str(output_path), {"boundaries": scene_boundaries}
 

@@ -112,9 +112,14 @@ def test_style_prompts_contain_anti_ai_keywords():
         )
 
 
-def test_style_prompts_mention_animals():
-    """Style prompts should specify how animals are drawn (not stick figures)."""
-    for style_name, prompt in STYLE_PROMPTS.items():
-        assert "animal" in prompt.lower(), (
-            f"Style '{style_name}' missing animal drawing guidance"
+def test_animal_guidance_exists():
+    """Animal guidance should exist for each style."""
+    from momentary.config import ANIMAL_GUIDANCE, STYLE_PROMPTS
+    
+    for style_name in STYLE_PROMPTS.keys():
+        assert style_name in ANIMAL_GUIDANCE, (
+            f"Style '{style_name}' missing from ANIMAL_GUIDANCE"
+        )
+        assert "animal" in ANIMAL_GUIDANCE[style_name].lower(), (
+            f"Style '{style_name}' animal guidance missing 'animal' keyword"
         )
