@@ -159,9 +159,9 @@ STORYBOOK_STYLE_PROMPT = (
 LAZY_DOODLE_STYLE_PROMPT = (
     "lazy hand-drawn doodle, "
     "very wobbly imperfect shaky lines like quick sketch on napkin, "
-    "white background by default unless scene requires time of day or mood, "
+    "flat color background, "
     "human characters as simple stick figures with round white heads and dot eyes, "
-    "minimal or no lighting, no shadows, no depth, "
+    "minimal or no lighting/shadows/depth depends on the scene, "
     "crude casual linework with visible hand tremor, "
     "flat colors with no shading or highlights, "
     "intentionally sloppy and unfinished looking, "
