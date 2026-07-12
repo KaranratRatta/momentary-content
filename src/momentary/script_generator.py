@@ -70,9 +70,19 @@ IMPORTANT IMAGE PROMPT GUIDELINES:
 - Describe the composition and what's happening in the scene
 - Make prompts specific enough to generate consistent style across scenes
 
+THUMBNAIL PROMPT: Create a visual description for an eye-catching YouTube thumbnail that matches your video's style. Make it bold, simple, and attention-grabbing. Focus on one key visual element that represents the video's core idea.
+
+DESCRIPTION: Write a YouTube description that:
+- Starts with a hook that creates curiosity
+- Briefly mentions what viewers will learn
+- Includes 3-5 relevant hashtags at the end
+- Is 2-4 sentences total, conversational tone
+
 Return ONLY valid JSON in this format:
 {{
   "title": "Video Title",
+  "description": "YouTube description here",
+  "thumbnail_prompt": "Thumbnail visual description here",
   "scenes": [
     {{
       "narration": "Natural narration here",
@@ -119,6 +129,11 @@ def generate_script(
         script_path = run_dir / "script.json"
         with open(script_path, "w") as f:
             json.dump(script, f, indent=2)
+        
+        if "description" in script:
+            description_path = run_dir / "description.txt"
+            with open(description_path, "w") as f:
+                f.write(script["description"])
 
     return script
 

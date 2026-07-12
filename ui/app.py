@@ -34,7 +34,7 @@ from momentary.config import (
     ELEVENLABS_VOICE_ID,
 )
 from momentary.script_generator import generate_script, research_topic
-from momentary.image_generator import generate_image, generate_all_images
+from momentary.image_generator import generate_image, generate_all_images, generate_thumbnail
 from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
@@ -456,7 +456,18 @@ with tab_pipeline:
                 st.success(f"Generated {len(image_paths)} images")
             st.rerun()
 
-        voice_step = image_step + 1
+        thumbnail_step = image_step + 1
+        if st.session_state.generation_step == thumbnail_step:
+            st.session_state.generation_step = thumbnail_step + 1
+            script = st.session_state.script
+            if "thumbnail_prompt" in script:
+                with st.spinner("Generating thumbnail..."):
+                    thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, run_dir=run_dir)
+                    st.session_state.thumbnail_path = thumbnail_path
+                    st.success(f"Thumbnail generated")
+            st.rerun()
+
+        voice_step = thumbnail_step + 1
         if st.session_state.generation_step == voice_step:
             st.session_state.generation_step = voice_step + 1
             with st.spinner("Generating voice narration..."):

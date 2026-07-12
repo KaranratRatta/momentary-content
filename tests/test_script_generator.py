@@ -122,6 +122,35 @@ def test_prompt_json_format():
     assert '"narration"' in prompt, "Should include narration in JSON example"
     assert '"image_prompt"' in prompt, "Should include image_prompt in JSON example"
     assert '"duration_hint"' in prompt, "Should include duration_hint in JSON example"
+    assert '"description"' in prompt, "Should include description in JSON example"
+    assert '"thumbnail_prompt"' in prompt, "Should include thumbnail_prompt in JSON example"
+
+
+def test_prompt_description_guidelines():
+    """Prompt should include guidelines for writing YouTube description."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=30.0,
+        video_idea=""
+    )
+    assert "DESCRIPTION" in prompt or "description" in prompt.lower(), "Should mention description"
+    assert "hook" in prompt.lower() or "curiosity" in prompt.lower(), "Should mention hook/curiosity for description"
+    assert "hashtag" in prompt.lower() or "#" in prompt, "Should mention hashtags"
+
+
+def test_prompt_thumbnail_guidelines():
+    """Prompt should include guidelines for creating thumbnail prompt."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=30.0,
+        video_idea=""
+    )
+    assert "THUMBNAIL" in prompt or "thumbnail" in prompt.lower(), "Should mention thumbnail"
+    assert "eye-catching" in prompt.lower() or "attention" in prompt.lower(), "Should mention eye-catching/attention"
 
 
 def test_prompt_no_none_leakage():

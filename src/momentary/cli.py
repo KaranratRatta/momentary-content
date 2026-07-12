@@ -25,7 +25,7 @@ from momentary.config import (
     IMAGE_DENSITY,
 )
 from momentary.script_generator import generate_script, research_topic
-from momentary.image_generator import generate_all_images, generate_image
+from momentary.image_generator import generate_all_images, generate_image, generate_thumbnail
 from momentary.voice_generator import generate_all_voices, generate_voice, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
@@ -114,6 +114,11 @@ def generate(
     console.print(f"\n[bold][{'3' if research else '2'}/5] Generating images...[/bold]")
     image_paths = generate_all_images(scenes, model=image_model, run_dir=run_dir)
     console.print(f"  Generated {len(image_paths)} images")
+
+    if "thumbnail_prompt" in script:
+        console.print(f"\n[bold]Generating thumbnail...[/bold]")
+        thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, run_dir=run_dir)
+        console.print(f"  Thumbnail: [bold]{thumbnail_path}[/bold]")
 
     console.print(f"\n[bold][{'4' if research else '3'}/5] Generating voice narration...[/bold]")
     try:
