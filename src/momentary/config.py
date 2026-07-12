@@ -112,17 +112,27 @@ def create_run_directory(topic: str) -> Path:
 
 
 def get_next_run_number() -> int:
-    if not RUNS_DIR.exists():
-        return 1
+    counter_file = RUNS_DIR / ".counter"
     
-    max_num = 0
-    for folder in RUNS_DIR.iterdir():
-        if folder.is_dir():
-            parts = folder.name.split("_")
-            if parts and parts[0].isdigit():
-                max_num = max(max_num, int(parts[0]))
+    if counter_file.exists():
+        with open(counter_file) as f:
+            current = int(f.read().strip())
+        next_num = current + 1
+    else:
+        max_existing = 0
+        if RUNS_DIR.exists():
+            for folder in RUNS_DIR.iterdir():
+                if folder.is_dir():
+                    parts = folder.name.split("_")
+                    if parts and parts[0].isdigit():
+                        max_existing = max(max_existing, int(parts[0]))
+        next_num = max_existing + 1
     
-    return max_num + 1
+    RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(counter_file, "w") as f:
+        f.write(str(next_num))
+    
+    return next_num
 
 
 def save_run_config(run_dir: Path, config: dict):

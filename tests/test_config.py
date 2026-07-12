@@ -123,18 +123,19 @@ def test_get_next_run_number_returns_int():
 
 
 def test_get_next_run_number_increments(tmp_path):
-    """get_next_run_number should increment when new folders are created."""
+    """get_next_run_number should always increment, even if runs are deleted."""
     import momentary.config as config
     original_runs_dir = config.RUNS_DIR
     config.RUNS_DIR = tmp_path
     
     try:
         num1 = config.get_next_run_number()
-        
-        (tmp_path / f"{num1}_test_20240101_120000").mkdir()
-        
         num2 = config.get_next_run_number()
-        assert num2 == num1 + 1, "Should increment after folder creation"
+        assert num2 == num1 + 1, "Should increment by 1"
+        
+        # Even if we don't create a folder, counter should increment
+        num3 = config.get_next_run_number()
+        assert num3 == num2 + 1, "Should increment even without folder creation"
     finally:
         config.RUNS_DIR = original_runs_dir
 
