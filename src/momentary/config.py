@@ -124,8 +124,6 @@ CARTOON_STYLE_PROMPT = (
     "no photorealism, no 3D rendering"
 )
 
-CARTOON_ANIMAL_GUIDANCE = "animals drawn with more detail and personality, not stick figures"
-
 ANIME_STYLE_PROMPT = (
     "anime illustration style with hand-drawn feel, "
     "slight line weight variation like actual pen work, "
@@ -137,8 +135,6 @@ ANIME_STYLE_PROMPT = (
     "no glossy AI perfection, no plastic smoothness"
 )
 
-ANIME_ANIMAL_GUIDANCE = "animals drawn with full anime detail and personality"
-
 REALISTIC_STYLE_PROMPT = (
     "cinematic digital painting with photographic quality, "
     "film grain texture overlay, "
@@ -148,8 +144,6 @@ REALISTIC_STYLE_PROMPT = (
     "color grading like professional film, "
     "no AI artifacts, no oversharpening, no plastic skin"
 )
-
-REALISTIC_ANIMAL_GUIDANCE = "animals rendered with full realistic detail"
 
 STORYBOOK_STYLE_PROMPT = (
     "classic children's book illustration, "
@@ -162,23 +156,28 @@ STORYBOOK_STYLE_PROMPT = (
     "no digital perfection, no glossy AI look"
 )
 
-STORYBOOK_ANIMAL_GUIDANCE = "animals drawn with charming detail and expression"
+LAZY_DOODLE_STYLE_PROMPT = (
+    "lazy hand-drawn doodle, "
+    "very wobbly imperfect shaky lines like quick sketch on napkin, "
+    "flat solid color background with no texture or gradient, "
+    "human characters as simple stick figures with round white heads and dot eyes, "
+    "minimal or no lighting, no shadows, no depth, "
+    "crude casual linework with visible hand tremor, "
+    "flat colors with no shading or highlights, "
+    "intentionally sloppy and unfinished looking, "
+    "no glossy AI look, no perfect lines, no smooth rendering, "
+    "no photorealism, no 3D, no dramatic lighting"
+)
 
 STYLE_PROMPTS = {
+    "Lazy Doodle": LAZY_DOODLE_STYLE_PROMPT,
     "Cartoon Stick Figure": CARTOON_STYLE_PROMPT,
     "Anime": ANIME_STYLE_PROMPT,
     "Realistic": REALISTIC_STYLE_PROMPT,
     "Storybook": STORYBOOK_STYLE_PROMPT,
 }
 
-ANIMAL_GUIDANCE = {
-    "Cartoon Stick Figure": CARTOON_ANIMAL_GUIDANCE,
-    "Anime": ANIME_ANIMAL_GUIDANCE,
-    "Realistic": REALISTIC_ANIMAL_GUIDANCE,
-    "Storybook": STORYBOOK_ANIMAL_GUIDANCE,
-}
-
-DEFAULT_STYLE = "Cartoon Stick Figure"
+DEFAULT_STYLE = "Lazy Doodle"
 
 MOTION_EFFECTS = {
     "Static": "static",
