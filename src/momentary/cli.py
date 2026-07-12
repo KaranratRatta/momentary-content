@@ -26,7 +26,7 @@ from momentary.config import (
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_all_images, generate_image
-from momentary.voice_generator import generate_all_voices, generate_voice, generate_single_audio, split_audio_by_boundaries
+from momentary.voice_generator import generate_all_voices, generate_voice, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 app = typer.Typer(
@@ -122,6 +122,11 @@ def generate(
             boundaries = timestamp_data["boundaries"]
             audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
             console.print(f"  Generated single audio, split into {len(audio_paths)} clips")
+        elif audio_mode == "Chunked Audio":
+            full_audio_path, timestamp_data = generate_chunked_audio(scenes, model=voice_model, run_dir=run_dir)
+            boundaries = timestamp_data["boundaries"]
+            audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
+            console.print(f"  Generated chunked audio, split into {len(audio_paths)} clips")
         else:
             audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
             console.print(f"  Generated {len(audio_paths)} audio clips")

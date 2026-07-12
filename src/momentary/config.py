@@ -186,9 +186,11 @@ DEFAULT_MOTION = "static"
 AUDIO_MODES = {
     "Per Scene": "per_scene",
     "Single Audio": "single_audio",
+    "Chunked Audio": "chunked_audio",
 }
 
-DEFAULT_AUDIO_MODE = "single_audio"
+DEFAULT_AUDIO_MODE = "chunked_audio"
+CHUNK_WORDS = 175
 
 NARRATION_THEMES = {
     "Educational": "educational, informative, clear explanations with interesting facts",

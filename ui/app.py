@@ -35,7 +35,7 @@ from momentary.config import (
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_image, generate_all_images
-from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, split_audio_by_boundaries
+from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 
@@ -301,6 +301,8 @@ with st.sidebar:
     )
     if audio_mode == "Single Audio":
         st.caption("Generates one continuous audio track, more natural flow")
+    elif audio_mode == "Chunked Audio":
+        st.caption("Splits narration into ~175 word chunks, more reliable for long videos")
     else:
         st.caption("Generates separate audio per scene")
 
@@ -466,6 +468,12 @@ with tab_pipeline:
                         audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
                         st.session_state.audio_paths = audio_paths
                         st.success(f"Generated single audio, split into {len(audio_paths)} clips")
+                    elif audio_mode == "Chunked Audio":
+                        full_audio_path, timestamp_data = generate_chunked_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
+                        boundaries = timestamp_data["boundaries"]
+                        audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
+                        st.session_state.audio_paths = audio_paths
+                        st.success(f"Generated chunked audio, split into {len(audio_paths)} clips")
                     else:
                         audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
                         st.session_state.audio_paths = audio_paths
