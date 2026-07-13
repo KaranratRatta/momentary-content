@@ -54,7 +54,7 @@ momentary-content/
 │       ├── config.json         # All generation settings
 │       ├── script.json
 │       ├── description.txt     # YouTube description
-│       ├── thumbnail.png       # Video thumbnail
+│       ├── thumbnail.png       # Video thumbnail with clickbait text
 │       ├── images/
 │       ├── audio/
 │       │   └── boundaries.json # Audio split timestamps
@@ -203,6 +203,7 @@ The script generator creates:
 - **Spoken English**: Conversational tone with contractions, casual transitions
 - **Description**: YouTube description with hook and hashtags
 - **Thumbnail prompt**: Eye-catching thumbnail description in same style
+- **Thumbnail text**: Short clickbait text (2-5 words) overlaid on thumbnail
 
 ### Run Directory Naming
 Run folders follow the format: `{run_number:03d}_{topic}_{timestamp}` (e.g., `020_my_topic_20260713_120000`). The run number is auto-incremented based on existing folders.

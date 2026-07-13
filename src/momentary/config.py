@@ -33,6 +33,7 @@ ELEVENLABS_VOICES = {
     "Sam": "yoZ06aMxZJJ28mfd3POQ",
     "Clara": "Qggl4b0xRMiqOwhPtVWT",
     "Russ": "HKFOb9iktHA85uKXydRT",
+    "Mira": "ZqvIIuD5aI9JFejebHiH",
     "Om": "ePiPWpzcHZrcqRzFrgQg",
 
 }

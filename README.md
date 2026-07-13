@@ -95,7 +95,7 @@ runs/
 │   ├── config.json          # All generation settings
 │   ├── script.json          # Generated script
 │   ├── description.txt      # YouTube description
-│   ├── thumbnail.png        # Video thumbnail
+│   ├── thumbnail.png        # Video thumbnail with clickbait text
 │   ├── images/
 │   │   ├── scene_000.png
 │   │   └── scene_001.png
@@ -171,6 +171,7 @@ The script generator includes:
 - **Spoken English** — Conversational tone with contractions, casual transitions
 - **YouTube description** — Generated with hook and hashtags
 - **Thumbnail prompt** — Eye-catching thumbnail description in same style
+- **Thumbnail text** — Short clickbait text (2-5 words) overlaid on thumbnail image
 
 ## Requirements
 
