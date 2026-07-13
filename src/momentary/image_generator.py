@@ -4,11 +4,13 @@ from pathlib import Path
 from momentary.config import FAL_IMAGE_MODEL, STYLE_PROMPTS, DEFAULT_STYLE, VIDEO_WIDTH, VIDEO_HEIGHT
 
 
-def generate_image(scene_prompt: str, scene_index: int, model: str | None = None, style: str | None = None, run_dir: Path | None = None) -> str:
-    style_name = style or DEFAULT_STYLE
-    style_prompt = STYLE_PROMPTS.get(style_name, STYLE_PROMPTS[DEFAULT_STYLE])
-    
-    full_prompt = f"{scene_prompt}, {style_prompt}"
+def generate_image(scene_prompt: str, scene_index: int, model: str | None = None, style: str | None = None, append_style: bool = False, run_dir: Path | None = None) -> str:
+    if append_style:
+        style_name = style or DEFAULT_STYLE
+        style_prompt = STYLE_PROMPTS.get(style_name, STYLE_PROMPTS[DEFAULT_STYLE])
+        full_prompt = f"{scene_prompt}, {style_prompt}"
+    else:
+        full_prompt = scene_prompt
 
     result = fal_client.subscribe(
         model or FAL_IMAGE_MODEL,
@@ -42,7 +44,7 @@ def generate_image(scene_prompt: str, scene_index: int, model: str | None = None
     return str(output_path)
 
 
-def generate_all_images(scenes: list, model: str | None = None, style: str | None = None, run_dir: Path | None = None) -> list:
+def generate_all_images(scenes: list, model: str | None = None, style: str | None = None, append_style: bool = False, run_dir: Path | None = None) -> list:
     if run_dir:
         images_dir = run_dir / "images"
     else:
@@ -52,16 +54,18 @@ def generate_all_images(scenes: list, model: str | None = None, style: str | Non
     image_paths = []
     for i, scene in enumerate(scenes):
         print(f"  Generating image for scene {i + 1}/{len(scenes)}...")
-        path = generate_image(scene["image_prompt"], i, model, style, run_dir)
+        path = generate_image(scene["image_prompt"], i, model, style, append_style, run_dir)
         image_paths.append(path)
     return image_paths
 
 
-def generate_thumbnail(thumbnail_prompt: str, model: str | None = None, style: str | None = None, run_dir: Path | None = None) -> str:
-    style_name = style or DEFAULT_STYLE
-    style_prompt = STYLE_PROMPTS.get(style_name, STYLE_PROMPTS[DEFAULT_STYLE])
-    
-    full_prompt = f"{thumbnail_prompt}, {style_prompt}"
+def generate_thumbnail(thumbnail_prompt: str, model: str | None = None, style: str | None = None, append_style: bool = False, run_dir: Path | None = None) -> str:
+    if append_style:
+        style_name = style or DEFAULT_STYLE
+        style_prompt = STYLE_PROMPTS.get(style_name, STYLE_PROMPTS[DEFAULT_STYLE])
+        full_prompt = f"{thumbnail_prompt}, {style_prompt}"
+    else:
+        full_prompt = thumbnail_prompt
     
     result = fal_client.subscribe(
         model or FAL_IMAGE_MODEL,

@@ -102,6 +102,13 @@ uv run momentary generate "Topic" -d 0.5      # 30 second video
 uv run momentary generate "Topic" -t "Humorous"
 uv run momentary generate "Topic" -t "Dramatic"
 
+# Visual style
+uv run momentary generate "Topic" -s "Anime"
+uv run momentary generate "Topic" -s "Realistic"
+
+# Append style to image prompts (default: no, LLM incorporates style)
+uv run momentary generate "Topic" --append-style
+
 # Skip research step
 uv run momentary generate "Topic" --no-research
 
@@ -115,12 +122,15 @@ uv run momentary generate "Topic" --density "Maximum"   # 3x images
 uv run momentary generate "Topic" --density "Fewer"     # 0.5x images
 
 # Component testing
-uv run momentary script "Topic" -d 3 -t "Educational"
+uv run momentary script "Topic" -d 3 -t "Educational" -s "Anime"
 uv run momentary image "Prompt"
 uv run momentary voice "Text"
 
 # Assemble from a specific run
 uv run momentary assemble runs/topic_timestamp
+
+# Test audio splitting
+uv run momentary test-split runs/topic_timestamp
 
 # Status check
 uv run momentary status
@@ -257,6 +267,14 @@ When making changes to the codebase, ALWAYS check these items:
 - [ ] Update `ui/app.py` - Handle new fields from script
 - [ ] Update tests - Add test for new JSON fields in prompt
 - [ ] Run `uv run pytest` - Verify all tests pass
+
+### Style handling:
+- [ ] Style description is passed to LLM in script generation prompt
+- [ ] LLM incorporates style into image_prompt and thumbnail_prompt
+- [ ] `append_style` option (default: False) controls whether to append style to image prompts
+- [ ] If `append_style=False`, LLM-designed prompts are used as-is
+- [ ] If `append_style=True`, style description is appended to each prompt
+- [ ] Both CLI and UI must support `--style` and `--append-style` options
 
 ### General rule:
 - [ ] Search for all usages of changed functions/constants

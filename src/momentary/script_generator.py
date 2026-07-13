@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 from openai import OpenAI
-from momentary.config import OPENROUTER_API_KEY, OPENROUTER_MODEL, NARRATION_THEMES, DEFAULT_THEME, RESEARCH_PROMPT
+from momentary.config import OPENROUTER_API_KEY, OPENROUTER_MODEL, NARRATION_THEMES, DEFAULT_THEME, RESEARCH_PROMPT, STYLE_PROMPTS, DEFAULT_STYLE
 
 
-def _build_system_prompt(num_scenes: int, theme: str = "Educational", research_context: str = "", target_duration_seconds: float | None = None, video_idea: str = "") -> str:
+def _build_system_prompt(num_scenes: int, theme: str = "Educational", research_context: str = "", target_duration_seconds: float | None = None, video_idea: str = "", style: str = DEFAULT_STYLE) -> str:
     theme_description = NARRATION_THEMES.get(theme, NARRATION_THEMES[DEFAULT_THEME])
+    style_description = STYLE_PROMPTS.get(style, STYLE_PROMPTS[DEFAULT_STYLE])
 
     research_section = ""
     if research_context:
@@ -47,10 +48,15 @@ The style is casual and engaging, similar to channels like Kurzgesagt, Vsauce, o
 
 NARRATION STYLE: {theme_description}
 
-HOOK STRUCTURE: The first 1-2 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching.
+VISUAL STYLE: {style_description}
+
+IMPORTANT: When writing image_prompt and thumbnail_prompt, you MUST incorporate ALL elements of the visual style described above. Include details about line quality, background treatment, character design, lighting, and overall aesthetic in every prompt.
+
+HOOK STRUCTURE: The first 1-2 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching. Don't reveal the answer or main point yet - just hint at something interesting coming.
 
 SPOKEN ENGLISH: Write like you're talking to a friend, not writing an essay. Use:
 - Contractions (it's, you'll, don't, there's)
+- Casual transitions (so, but, like, you know)
 - Short, punchy sentences mixed with longer ones
 - Conversational tone, not formal academic language
 - Rhetorical questions to engage the viewer
@@ -59,18 +65,18 @@ Write a script with exactly {num_scenes} scenes{duration_phrase} about the given
 
 Each scene should have:
 - narration: The portion of narration for this specific image/scene. Can be a fragment, one sentence, or multiple sentences depending on visual pacing.
-- image_prompt: a detailed visual description for generating an illustration
+- image_prompt: a detailed visual description for generating an illustration that fully incorporates the visual style described above
 - duration_hint: estimated seconds for this scene based on narration length
 
 IMPORTANT IMAGE PROMPT GUIDELINES:
 - Human characters: simple stick figures with round white heads and dot eyes
-- Animals: draw with full detail and personality, NOT stick figures. Show their actual appearance with characteristic features
-- Objects/environments: detailed and textured, not stick figures
+- Objects/environments: detailed and textured
 - Include specific lighting, mood, and color details
 - Describe the composition and what's happening in the scene
 - Make prompts specific enough to generate consistent style across scenes
+- CRITICAL: Every image_prompt must fully incorporate the visual style described above (line quality, background treatment, character design, lighting, overall aesthetic)
 
-THUMBNAIL PROMPT: Create a visual description for an eye-catching YouTube thumbnail that matches your video's style. Make it bold, simple, and attention-grabbing. Focus on one key visual element that represents the video's core idea.
+THUMBNAIL PROMPT: Create a visual description for an eye-catching YouTube thumbnail that fully incorporates the visual style described above. Make it bold, simple, and attention-grabbing. Focus on one key visual element that represents the video's core idea. Include all style details (line quality, background, character design, etc.).
 
 DESCRIPTION: Write a YouTube description that:
 - Starts with a hook that creates curiosity
@@ -82,11 +88,11 @@ Return ONLY valid JSON in this format:
 {{
   "title": "Video Title",
   "description": "YouTube description here",
-  "thumbnail_prompt": "Thumbnail visual description here",
+  "thumbnail_prompt": "Thumbnail visual description here with full style incorporation",
   "scenes": [
     {{
       "narration": "Natural narration here",
-      "image_prompt": "Detailed image prompt here",
+      "image_prompt": "Detailed image prompt here with full style incorporation",
       "duration_hint": 8
     }}
   ]
@@ -103,6 +109,7 @@ def generate_script(
     research_context: str = "",
     target_duration_seconds: float | None = None,
     video_idea: str = "",
+    style: str = DEFAULT_STYLE,
     run_dir: Path | None = None,
 ) -> dict:
     client = OpenAI(
@@ -110,7 +117,7 @@ def generate_script(
         base_url="https://openrouter.ai/api/v1",
     )
 
-    system_prompt = _build_system_prompt(num_scenes, theme, research_context, target_duration_seconds, video_idea)
+    system_prompt = _build_system_prompt(num_scenes, theme, research_context, target_duration_seconds, video_idea, style)
     user_prompt = f"Write a video script about: {topic}"
 
     response = client.chat.completions.create(

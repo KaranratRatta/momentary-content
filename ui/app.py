@@ -286,6 +286,12 @@ with st.sidebar:
         options=list(STYLE_PROMPTS.keys()),
         index=list(STYLE_PROMPTS.keys()).index(DEFAULT_STYLE),
     )
+    
+    append_style = st.checkbox(
+        "Append style description to image prompts",
+        value=False,
+        help="If unchecked (default), LLM incorporates style into prompts. If checked, style description is appended to each image prompt."
+    )
 
     st.subheader("Video Motion")
     motion = st.selectbox(
@@ -420,6 +426,7 @@ with tab_pipeline:
             "theme": theme,
             "research": research,
             "style": style,
+            "append_style": append_style,
             "llm_model": llm_model or OPENROUTER_MODEL,
             "image_model": image_model or FAL_IMAGE_MODEL,
             "voice_model": voice_model or ELEVENLABS_MODEL,
@@ -456,6 +463,7 @@ with tab_pipeline:
                     research_context=research_context,
                     target_duration_seconds=target_duration_seconds,
                     video_idea=video_idea,
+                    style=style,
                     run_dir=run_dir,
                 )
                 title = script.get("title", topic)
@@ -471,7 +479,7 @@ with tab_pipeline:
             st.session_state.generation_step = image_step + 1
             with st.spinner("Generating images..."):
                 scenes = st.session_state.scenes
-                image_paths = generate_all_images(scenes, model=image_model, style=style, run_dir=run_dir)
+                image_paths = generate_all_images(scenes, model=image_model, style=style, append_style=append_style, run_dir=run_dir)
                 st.session_state.image_paths = image_paths
                 st.success(f"Generated {len(image_paths)} images")
             st.rerun()
@@ -482,7 +490,7 @@ with tab_pipeline:
             script = st.session_state.script
             if "thumbnail_prompt" in script:
                 with st.spinner("Generating thumbnail..."):
-                    thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, run_dir=run_dir)
+                    thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, append_style=append_style, run_dir=run_dir)
                     st.session_state.thumbnail_path = thumbnail_path
                     st.success(f"Thumbnail generated")
             st.rerun()

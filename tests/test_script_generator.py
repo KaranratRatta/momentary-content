@@ -104,8 +104,8 @@ def test_prompt_image_guidelines():
         video_idea=""
     )
     assert "stick figures" in prompt.lower(), "Should mention stick figures"
-    assert "Animals" in prompt or "animals" in prompt, "Should mention animals"
-    assert "NOT stick figures" in prompt or "not stick figures" in prompt, "Should clarify animals are not stick figures"
+    assert "visual style" in prompt.lower(), "Should mention visual style"
+    assert "incorporate" in prompt.lower(), "Should instruct to incorporate style"
 
 
 def test_prompt_json_format():
@@ -190,3 +190,33 @@ def test_prompt_research_selective_guidance():
     )
     assert "do NOT need to use all" in prompt or "select" in prompt.lower(), "Should guide selective usage of research"
     assert "fit the target video length" in prompt or "video length" in prompt.lower(), "Should mention fitting video length"
+
+
+def test_prompt_includes_visual_style():
+    """Prompt should include the visual style description."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=None,
+        video_idea="",
+        style="Lazy Doodle"
+    )
+    assert "VISUAL STYLE" in prompt, "Should include VISUAL STYLE section"
+    assert "lazy hand-drawn doodle" in prompt.lower(), "Should include style description"
+    assert "incorporate ALL elements" in prompt, "Should instruct to incorporate style elements"
+
+
+def test_prompt_style_parameter_default():
+    """Prompt should use default style when not specified."""
+    from momentary.config import DEFAULT_STYLE, STYLE_PROMPTS
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=None,
+        video_idea=""
+    )
+    default_style_prompt = STYLE_PROMPTS[DEFAULT_STYLE]
+    # Check that at least some key phrase from the default style is in the prompt
+    assert "wobbly" in prompt.lower() or "doodle" in prompt.lower(), "Should include default style description"

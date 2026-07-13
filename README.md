@@ -145,6 +145,20 @@ Available styles (configurable in config.py):
 
 All styles maintain consistent visual appearance across scenes and include anti-AI keywords to reduce glossy/perfect appearance.
 
+### Style Handling
+
+By default, the LLM incorporates the full style description into each image prompt during script generation. This creates more cohesive, natural prompts.
+
+If you prefer the old behavior, use `--append-style` to append the style description to each image prompt after generation:
+
+```bash
+# Default: LLM incorporates style into prompts
+uv run momentary generate "Topic"
+
+# Alternative: Append style to prompts
+uv run momentary generate "Topic" --append-style
+```
+
 ## Script Generation Features
 
 The script generator includes:

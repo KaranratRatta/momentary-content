@@ -14,6 +14,7 @@ from momentary.config import (
     DEFAULT_THEME,
     DEFAULT_IMAGE_DENSITY,
     DEFAULT_RESEARCH,
+    DEFAULT_STYLE,
     calculate_scenes,
     create_run_directory,
     save_run_config,
@@ -24,6 +25,7 @@ from momentary.config import (
     AUDIO_MODES,
     NARRATION_THEMES,
     IMAGE_DENSITY,
+    STYLE_PROMPTS,
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_all_images, generate_image, generate_thumbnail
@@ -67,7 +69,9 @@ def generate(
     motion: str = typer.Option(DEFAULT_MOTION, "--motion", "-m", help=f"Motion effect: {', '.join(MOTION_EFFECTS.keys())}"),
     audio_mode: str = typer.Option(DEFAULT_AUDIO_MODE, "--audio-mode", help=f"Audio mode: {', '.join(AUDIO_MODES.keys())}"),
     theme: str = typer.Option(DEFAULT_THEME, "--theme", "-t", help=f"Narration theme: {', '.join(NARRATION_THEMES.keys())}"),
+    style: str = typer.Option(DEFAULT_STYLE, "--style", "-s", help=f"Visual style: {', '.join(STYLE_PROMPTS.keys())}"),
     research: bool = typer.Option(DEFAULT_RESEARCH, "--research/--no-research", help="Research topic before writing script"),
+    append_style: bool = typer.Option(False, "--append-style/--no-append-style", help="Append style description to image prompts (default: no, LLM incorporates style)"),
     llm_model: str = typer.Option(None, "--llm-model", help="OpenRouter model (default: from .env)"),
     image_model: str = typer.Option(None, "--image-model", help="Fal.ai image model (default: from .env)"),
     voice_model: str = typer.Option(None, "--voice-model", help="ElevenLabs TTS model (default: from .env)"),
@@ -81,11 +85,13 @@ def generate(
     console.print(f"  Target duration: [bold]{duration} min[/bold] (~{num_scenes} scenes)")
     console.print(f"  Image density: [bold]{density}[/bold]")
     console.print(f"  Theme: [bold]{theme}[/bold]")
+    console.print(f"  Style: [bold]{style}[/bold]")
     if video_idea:
         console.print(f"  Video idea: [bold]{video_idea}[/bold]")
     console.print(f"  Motion: [bold]{motion}[/bold]")
     console.print(f"  Audio mode: [bold]{audio_mode}[/bold]")
     console.print(f"  Research: [bold]{'Yes' if research else 'No'}[/bold]")
+    console.print(f"  Append style: [bold]{'Yes' if append_style else 'No'}[/bold]")
     if llm_model:
         console.print(f"  LLM Model: [bold]{llm_model}[/bold]")
     if image_model:
@@ -103,7 +109,9 @@ def generate(
         "motion": motion,
         "audio_mode": audio_mode,
         "theme": theme,
+        "style": style,
         "research": research,
+        "append_style": append_style,
         "llm_model": llm_model or OPENROUTER_MODEL,
         "image_model": image_model or FAL_IMAGE_MODEL,
         "voice_model": voice_model or ELEVENLABS_MODEL,
@@ -120,7 +128,7 @@ def generate(
 
     console.print(f"\n[bold][{'2' if research else '1'}/5] Generating script...[/bold]")
     target_duration_seconds = duration * 60
-    script = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, target_duration_seconds=target_duration_seconds, video_idea=video_idea, run_dir=run_dir)
+    script = generate_script(topic, num_scenes, model=llm_model, theme=theme, research_context=research_context, target_duration_seconds=target_duration_seconds, video_idea=video_idea, style=style, run_dir=run_dir)
     title = script.get("title", topic)
     scenes = script["scenes"]
     console.print(f"  Title: [bold]{title}[/bold]")
@@ -129,12 +137,12 @@ def generate(
     console.print(f"  Total narration: {total_chars} chars (~{total_chars/15:.0f}s of audio)")
 
     console.print(f"\n[bold][{'3' if research else '2'}/5] Generating images...[/bold]")
-    image_paths = generate_all_images(scenes, model=image_model, run_dir=run_dir)
+    image_paths = generate_all_images(scenes, model=image_model, style=style, append_style=append_style, run_dir=run_dir)
     console.print(f"  Generated {len(image_paths)} images")
 
     if "thumbnail_prompt" in script:
         console.print(f"\n[bold]Generating thumbnail...[/bold]")
-        thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, run_dir=run_dir)
+        thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, append_style=append_style, run_dir=run_dir)
         console.print(f"  Thumbnail: [bold]{thumbnail_path}[/bold]")
 
     console.print(f"\n[bold][{'4' if research else '3'}/5] Generating voice narration...[/bold]")
@@ -168,6 +176,7 @@ def script(
     video_idea: str = typer.Option("", "--idea", "-i", help="Optional: specific angle or focus for the video"),
     duration: float = typer.Option(DEFAULT_DURATION_MINUTES, "--duration", "-d", help="Target duration in minutes"),
     theme: str = typer.Option(DEFAULT_THEME, "--theme", "-t", help=f"Narration theme: {', '.join(NARRATION_THEMES.keys())}"),
+    style: str = typer.Option(DEFAULT_STYLE, "--style", "-s", help=f"Visual style: {', '.join(STYLE_PROMPTS.keys())}"),
     research: bool = typer.Option(DEFAULT_RESEARCH, "--research/--no-research", help="Research topic before writing script"),
     model: str = typer.Option(None, "--model", "-m", help="OpenRouter model (default: from .env)"),
     output: Path = typer.Option(None, "--output", "-o", help="Save script to file"),
@@ -178,6 +187,7 @@ def script(
     num_scenes = calculate_scenes(duration)
     console.print(f"[bold]Generating script for:[/bold] {topic} ({num_scenes} scenes, ~{duration} min)")
     console.print(f"  Theme: [bold]{theme}[/bold]")
+    console.print(f"  Style: [bold]{style}[/bold]")
     if video_idea:
         console.print(f"  Video idea: [bold]{video_idea}[/bold]")
     console.print(f"  Research: [bold]{'Yes' if research else 'No'}[/bold]")
@@ -193,7 +203,7 @@ def script(
         console.print(f"  Research complete ({len(research_context)} chars)")
 
     target_duration_seconds = duration * 60
-    result = generate_script(topic, num_scenes, model=model, theme=theme, research_context=research_context, target_duration_seconds=target_duration_seconds, video_idea=video_idea, run_dir=run_dir)
+    result = generate_script(topic, num_scenes, model=model, theme=theme, research_context=research_context, target_duration_seconds=target_duration_seconds, video_idea=video_idea, style=style, run_dir=run_dir)
 
     formatted = json.dumps(result, indent=2)
     console.print(Panel(formatted, title="Generated Script", border_style="blue"))
