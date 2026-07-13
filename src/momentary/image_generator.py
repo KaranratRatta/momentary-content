@@ -68,7 +68,7 @@ def generate_thumbnail(thumbnail_prompt: str, thumbnail_text: str = "", model: s
         full_prompt = thumbnail_prompt
     
     if thumbnail_text:
-        full_prompt = f"{full_prompt}, with the text '{thumbnail_text}' clearly visible in a handwritten style font"
+        full_prompt = f"{full_prompt}, with the text '{thumbnail_text}' displayed prominently in a visually appealing way"
     
     result = fal_client.subscribe(
         model or FAL_IMAGE_MODEL,

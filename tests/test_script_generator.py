@@ -235,3 +235,15 @@ def test_prompt_style_parameter_default():
     default_style_prompt = STYLE_PROMPTS[DEFAULT_STYLE]
     # Check that at least some key phrase from the default style is in the prompt
     assert "wobbly" in prompt.lower() or "doodle" in prompt.lower(), "Should include default style description"
+
+
+def test_prompt_image_text_guideline():
+    """Prompt should tell LLM it can optionally use text in images, but sparingly."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=None,
+        video_idea=""
+    )
+    assert "text" in prompt.lower() and "sparingly" in prompt.lower(), "Should mention using text sparingly in images"
