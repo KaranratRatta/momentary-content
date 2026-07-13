@@ -190,8 +190,8 @@ STORYBOOK_STYLE_PROMPT = (
 
 LAZY_DOODLE_STYLE_PROMPT = (
     "lazy hand-drawn doodle, "
-    "white background by default unless scene requires time of day or mood, "
-    "human characters as simple stick figures with round white heads, no noses, "
+    "color background for scene requires time of day or mood, else use white background, "
+    "human characters as simple stick figures with round white heads, no noses, eyes matching emotion and action,"
     "minimal or no lighting/shadows/depth depends on the scene, "
     "flat colors with no shading or highlights, "
     "no glossy AI look, no smooth rendering, "
