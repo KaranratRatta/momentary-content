@@ -154,6 +154,13 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
                 "start": scene_start,
                 "end": scene_end,
             })
+        
+        for i in range(len(scene_boundaries) - 1):
+            scene_boundaries[i]["end"] = scene_boundaries[i + 1]["start"]
+        
+        if scene_boundaries:
+            scene_boundaries[-1]["end"] = end_times[-1] if end_times else 10.0
+        
         print(f"  Created {len(scene_boundaries)} scene boundaries")
     else:
         print(f"  WARNING: No alignment data received, using fallback boundaries")
@@ -286,6 +293,13 @@ def generate_chunked_audio(scenes: list, model: str | None = None, voice_id: str
                 "start": scene_start,
                 "end": scene_end,
             })
+        
+        for i in range(len(scene_boundaries) - 1):
+            scene_boundaries[i]["end"] = scene_boundaries[i + 1]["start"]
+        
+        if scene_boundaries:
+            scene_boundaries[-1]["end"] = all_end_times[-1] if all_end_times else 10.0
+        
         print(f"  Created {len(scene_boundaries)} scene boundaries")
     else:
         print(f"  WARNING: No alignment data received, using fallback boundaries")

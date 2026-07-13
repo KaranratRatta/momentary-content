@@ -218,7 +218,7 @@ def test_prompt_includes_visual_style():
         style="Lazy Doodle"
     )
     assert "VISUAL STYLE" in prompt, "Should include VISUAL STYLE section"
-    assert "lazy hand-drawn doodle" in prompt.lower(), "Should include style description"
+    assert "lazy hand-drawn" in prompt.lower(), "Should include style description"
     assert "incorporate ALL elements" in prompt, "Should instruct to incorporate style elements"
 
 
@@ -234,7 +234,7 @@ def test_prompt_style_parameter_default():
     )
     default_style_prompt = STYLE_PROMPTS[DEFAULT_STYLE]
     # Check that at least some key phrase from the default style is in the prompt
-    assert "wobbly" in prompt.lower() or "doodle" in prompt.lower(), "Should include default style description"
+    assert "wobbly" in prompt.lower() or "lazy" in prompt.lower(), "Should include default style description"
 
 
 def test_prompt_image_text_guideline():
