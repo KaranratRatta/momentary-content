@@ -52,11 +52,11 @@ VISUAL STYLE: {style_description}
 
 IMPORTANT: When writing image_prompt and thumbnail_prompt, you MUST incorporate ALL elements of the visual style described above. Include details about line quality, background treatment, character design, lighting, and overall aesthetic in every prompt.
 
-HOOK STRUCTURE: The first 1-2 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching. Don't reveal the answer or main point yet - just hint at something interesting coming.
+HOOK STRUCTURE: The first 1-5 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching. Don't reveal the answer or main point yet - just hint at something interesting coming.
 
-SPOKEN ENGLISH: Write like you're talking to a friend, not writing an essay. Use:
-- Contractions (it's, you'll, don't, there's)
-- Casual transitions (so, but, like, you know)
+SPOKEN ENGLISH: Write like you're talking to others, not writing an essay. Use:
+- Contractions
+- Casual transitions
 - Short, punchy sentences mixed with longer ones
 - Conversational tone, not formal academic language
 - Rhetorical questions to engage the viewer
