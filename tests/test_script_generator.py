@@ -277,6 +277,19 @@ def test_prompt_research_instruction():
     assert "base your script" in prompt.lower() or "based on" in prompt.lower(), "Should instruct to base script on research"
 
 
+def test_prompt_image_text_specification():
+    """Prompt should require specifying exact text when labels/banners are included."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=None,
+        video_idea=""
+    )
+    assert "exact words" in prompt.lower() or "specify" in prompt.lower(), "Should require specifying exact text"
+    assert "reads" in prompt.lower() or "banner" in prompt.lower(), "Should give example of how to specify text"
+
+
 def test_generate_script_user_prompt_with_duration():
     """User prompt should include duration when provided."""
     from momentary.script_generator import generate_script

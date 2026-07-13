@@ -87,7 +87,7 @@ IMPORTANT IMAGE PROMPT GUIDELINES:
 - Describe the composition and what's happening in the scene
 - Make prompts specific enough to generate consistent style across scenes
 - CRITICAL: Every image_prompt must fully incorporate the visual style described above (line quality, background treatment, character design, lighting, overall aesthetic)
-- You may optionally include text, mainly english within an image to highlight a key topic or concept, but use this sparingly — only when it genuinely adds impact. Do not add text to every image. When you do include text, choose the font style and placement yourself to best fit the scene, don't make it too large.
+- You may optionally include text, mainly english within an image to highlight a key topic or concept, but use this sparingly — only when it genuinely adds impact. Do not add text to every image. When you do include text, you MUST specify the exact words to display (e.g., "a banner that reads 'QUANTUM PHYSICS'", "a arrow with label 'ENTREPRENEUR'"). Choose the font style and placement yourself to best fit the scene, don't make it too large.
 
 THUMBNAIL PROMPT: Create a visual description for an eye-catching YouTube thumbnail that fully incorporates the visual style described above. Make it bold, simple, and attention-grabbing. Focus on one key visual element that represents the video's core idea. Include all style details (line quality, background, character design, etc.). IMPORTANT: Include the clickbait text as part of the visual description, describing how it should look in the image (font style, color, position, etc.).
 
