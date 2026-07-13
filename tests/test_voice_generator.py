@@ -4,6 +4,9 @@ from pathlib import Path
 from momentary.voice_generator import (
     _split_text_into_chunks,
     split_audio_by_boundaries,
+    _match_scenes_to_timestamps,
+    _create_fallback_boundaries,
+    regenerate_boundaries,
 )
 
 
@@ -90,6 +93,75 @@ class TestIntegration:
 class TestBoundaryAdjustment:
     """Test that scene boundaries preserve inter-scene pauses."""
 
+    def test_match_scenes_preserves_pauses(self):
+        """Test that _match_scenes_to_timestamps adjusts boundaries to preserve pauses."""
+        scenes = [
+            {"narration": "First scene."},
+            {"narration": "Second scene."},
+            {"narration": "Third scene."},
+        ]
+
+        full_text = "First scene. Second scene. Third scene."
+        chars = list(full_text)
+        start_times = [i * 0.1 for i in range(len(chars))]
+        end_times = [(i + 1) * 0.1 for i in range(len(chars))]
+
+        boundaries = _match_scenes_to_timestamps(scenes, chars, start_times, end_times)
+
+        assert len(boundaries) == 3
+
+        assert boundaries[0]["start"] == 0.0
+        assert boundaries[0]["end"] == boundaries[1]["start"]
+
+        assert boundaries[1]["end"] == boundaries[2]["start"]
+
+        assert boundaries[2]["end"] == (len(chars)) * 0.1
+
+    def test_match_scenes_handles_mismatch(self):
+        """Test that _match_scenes_to_timestamps handles character mismatches gracefully."""
+        scenes = [
+            {"narration": "Hello"},
+            {"narration": "World"},
+        ]
+
+        chars = list("Hello World")
+        start_times = [i * 0.1 for i in range(len(chars))]
+        end_times = [(i + 1) * 0.1 for i in range(len(chars))]
+
+        boundaries = _match_scenes_to_timestamps(scenes, chars, start_times, end_times)
+
+        assert len(boundaries) == 2
+        assert boundaries[0]["scene_index"] == 0
+        assert boundaries[1]["scene_index"] == 1
+        assert boundaries[0]["end"] == boundaries[1]["start"]
+
+    def test_match_scenes_handles_short_arrays(self):
+        """Test that _match_scenes_to_timestamps doesn't crash with short arrays."""
+        scenes = [
+            {"narration": "Hello"},
+            {"narration": "World"},
+        ]
+
+        chars = list("Hello")
+        start_times = [0.0, 0.1, 0.2, 0.3, 0.4]
+        end_times = [0.1, 0.2, 0.3, 0.4, 0.5]
+
+        boundaries = _match_scenes_to_timestamps(scenes, chars, start_times, end_times)
+
+        assert len(boundaries) == 2
+        assert boundaries[0]["scene_index"] == 0
+        assert boundaries[1]["scene_index"] == 1
+
+    def test_create_fallback_boundaries(self):
+        """Test that _create_fallback_boundaries creates correct structure."""
+        boundaries = _create_fallback_boundaries(5)
+
+        assert len(boundaries) == 5
+        for i, boundary in enumerate(boundaries):
+            assert boundary["scene_index"] == i
+            assert boundary["start"] == i * 5.0
+            assert boundary["end"] == (i + 1) * 5.0
+
     def test_single_audio_boundary_adjustment(self, tmp_path, monkeypatch):
         """Test that generate_single_audio adjusts boundaries to preserve pauses."""
         from momentary.voice_generator import generate_single_audio
@@ -172,6 +244,85 @@ class TestBoundaryAdjustment:
         assert boundaries[1]["end"] == boundaries[2]["start"]
 
         assert boundaries[2]["end"] == (len(chars)) * 0.1
+
+
+class TestRegenerateBoundaries:
+    """Test the regenerate_boundaries function."""
+
+    def test_regenerate_boundaries_missing_script(self, tmp_path):
+        """Test that regenerate_boundaries raises error when script.json is missing."""
+        audio_dir = tmp_path / "audio"
+        audio_dir.mkdir()
+        (audio_dir / "full_audio.mp3").write_bytes(b"fake audio")
+        
+        with pytest.raises(FileNotFoundError, match="No script.json found"):
+            regenerate_boundaries(tmp_path)
+
+    def test_regenerate_boundaries_missing_audio(self, tmp_path):
+        """Test that regenerate_boundaries raises error when full_audio.mp3 is missing."""
+        import json
+        script = {"scenes": [{"narration": "Test"}]}
+        (tmp_path / "script.json").write_text(json.dumps(script))
+        
+        with pytest.raises(FileNotFoundError, match="No full_audio.mp3 found"):
+            regenerate_boundaries(tmp_path)
+
+    def test_regenerate_boundaries_empty_scenes(self, tmp_path):
+        """Test that regenerate_boundaries raises error when scenes are empty."""
+        import json
+        script = {"scenes": []}
+        (tmp_path / "script.json").write_text(json.dumps(script))
+        audio_dir = tmp_path / "audio"
+        audio_dir.mkdir()
+        (audio_dir / "full_audio.mp3").write_bytes(b"fake audio")
+        
+        with pytest.raises(ValueError, match="No scenes found"):
+            regenerate_boundaries(tmp_path)
+
+    def test_regenerate_boundaries_success(self, tmp_path, monkeypatch):
+        """Test successful boundary regeneration."""
+        import json
+        from unittest.mock import MagicMock, patch
+        import base64
+        
+        scenes = [
+            {"narration": "First scene."},
+            {"narration": "Second scene."},
+        ]
+        script = {"scenes": scenes}
+        (tmp_path / "script.json").write_text(json.dumps(script))
+        
+        audio_dir = tmp_path / "audio"
+        audio_dir.mkdir()
+        (audio_dir / "full_audio.mp3").write_bytes(b"fake audio")
+        
+        full_text = "First scene. Second scene."
+        chars = list(full_text)
+        
+        mock_alignment = MagicMock()
+        mock_alignment.characters = chars
+        mock_alignment.character_start_times_seconds = [i * 0.1 for i in range(len(chars))]
+        mock_alignment.character_end_times_seconds = [(i + 1) * 0.1 for i in range(len(chars))]
+        
+        mock_result = MagicMock()
+        mock_result.alignment = mock_alignment
+        
+        mock_client = MagicMock()
+        mock_client.text_to_speech.convert_with_timestamps.return_value = mock_result
+        
+        with patch('momentary.voice_generator.ElevenLabs', return_value=mock_client):
+            audio_path, data = regenerate_boundaries(tmp_path)
+        
+        assert "boundaries" in data
+        boundaries = data["boundaries"]
+        assert len(boundaries) == 2
+        
+        boundaries_path = tmp_path / "audio" / "boundaries.json"
+        assert boundaries_path.exists()
+        
+        with open(boundaries_path) as f:
+            saved_boundaries = json.load(f)
+        assert len(saved_boundaries) == 2
 
 
 if __name__ == "__main__":

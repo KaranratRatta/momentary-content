@@ -31,7 +31,7 @@ from momentary.config import (
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_all_images, generate_image, generate_thumbnail
-from momentary.voice_generator import generate_all_voices, generate_voice, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries
+from momentary.voice_generator import generate_all_voices, generate_voice, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries, regenerate_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 app = typer.Typer(
@@ -299,6 +299,7 @@ def assemble(
 @app.command()
 def test_split(
     run_dir: Path = typer.Argument(help="Path to run directory with full_audio.mp3"),
+    regenerate: bool = typer.Option(False, "--regenerate", help="Regenerate boundaries from audio"),
 ):
     """Test audio splitting on an existing run."""
     full_audio_path = run_dir / "audio" / "full_audio.mp3"
@@ -325,19 +326,24 @@ def test_split(
     console.print(f"  Audio file: {full_audio_path}")
     
     boundaries_path = run_dir / "audio" / "boundaries.json"
-    if boundaries_path.exists():
+    
+    if regenerate or not boundaries_path.exists():
+        if regenerate:
+            console.print(f"[yellow]Regenerating boundaries from audio...[/yellow]")
+        else:
+            console.print(f"[yellow]No saved boundaries found, regenerating...[/yellow]")
+        
+        try:
+            _, timestamp_data = regenerate_boundaries(run_dir)
+            boundaries = timestamp_data["boundaries"]
+            console.print(f"[green]Regenerated {len(boundaries)} boundaries[/green]")
+        except Exception as e:
+            console.print(f"[red]Error regenerating boundaries: {e}[/red]")
+            raise typer.Exit(1)
+    else:
         with open(boundaries_path) as f:
             boundaries = json.load(f)
         console.print(f"[green]Loaded {len(boundaries)} saved boundaries from boundaries.json[/green]")
-    else:
-        console.print(f"[yellow]No saved boundaries found, using dummy 5s intervals[/yellow]")
-        boundaries = []
-        for i, scene in enumerate(scenes):
-            boundaries.append({
-                "scene_index": i,
-                "start": i * 5.0,
-                "end": (i + 1) * 5.0,
-            })
     
     try:
         audio_paths = split_audio_by_boundaries(str(full_audio_path), boundaries, run_dir=run_dir)

@@ -6,6 +6,79 @@ from elevenlabs import ElevenLabs
 from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL
 
 
+def _match_scenes_to_timestamps(
+    scenes: list,
+    characters: list,
+    start_times: list,
+    end_times: list
+) -> list:
+    """Match scene narrations to character-level timestamps to find boundaries.
+    
+    Args:
+        scenes: List of scene dicts with "narration" key
+        characters: List of characters from alignment
+        start_times: List of start times for each character
+        end_times: List of end times for each character
+    
+    Returns:
+        List of boundary dicts with "scene_index", "start", "end"
+    """
+    scene_boundaries = []
+    char_index = 0
+    
+    for i, scene in enumerate(scenes):
+        narration = scene["narration"]
+        scene_start = None
+        scene_end = None
+        
+        narration_chars = list(narration)
+        narration_pos = 0
+        
+        while char_index < len(characters) and narration_pos < len(narration_chars):
+            if char_index < len(start_times) and char_index < len(end_times):
+                if characters[char_index].lower() == narration_chars[narration_pos].lower():
+                    if scene_start is None:
+                        scene_start = start_times[char_index]
+                    narration_pos += 1
+                    if narration_pos >= len(narration_chars):
+                        scene_end = end_times[char_index]
+            char_index += 1
+        
+        if scene_start is None:
+            scene_start = start_times[0] if start_times else 0.0
+        if scene_end is None:
+            if i + 1 < len(scenes):
+                scene_end = scene_boundaries[i + 1]["start"] if scene_boundaries else end_times[-1] if end_times else 10.0
+            else:
+                scene_end = end_times[-1] if end_times else 10.0
+        
+        scene_boundaries.append({
+            "scene_index": i,
+            "start": scene_start,
+            "end": scene_end,
+        })
+    
+    for i in range(len(scene_boundaries) - 1):
+        scene_boundaries[i]["end"] = scene_boundaries[i + 1]["start"]
+    
+    if scene_boundaries:
+        scene_boundaries[-1]["end"] = end_times[-1] if end_times else 10.0
+    
+    return scene_boundaries
+
+
+def _create_fallback_boundaries(num_scenes: int) -> list:
+    """Create fallback boundaries when alignment data is unavailable."""
+    return [
+        {
+            "scene_index": i,
+            "start": i * 5.0,
+            "end": (i + 1) * 5.0,
+        }
+        for i in range(num_scenes)
+    ]
+
+
 def _split_text_into_chunks(text: str, target_words: int = 175) -> list[str]:
     if not text or not text.strip():
         return []
@@ -117,59 +190,16 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
 
     if alignment and alignment.characters:
         print(f"  Processing {len(alignment.characters)} character timestamps...")
-        characters = alignment.characters
-        start_times = alignment.character_start_times_seconds
-        end_times = alignment.character_end_times_seconds
-
-        full_narration_chars = list(full_narration)
-        char_index = 0
-
-        for i, scene in enumerate(scenes):
-            narration = scene["narration"]
-            scene_start = None
-            scene_end = None
-
-            narration_chars = list(narration)
-            narration_pos = 0
-
-            while char_index < len(characters) and narration_pos < len(narration_chars):
-                if characters[char_index].lower() == narration_chars[narration_pos].lower():
-                    if scene_start is None:
-                        scene_start = start_times[char_index]
-                    narration_pos += 1
-                    if narration_pos >= len(narration_chars):
-                        scene_end = end_times[char_index]
-                char_index += 1
-
-            if scene_start is None:
-                scene_start = start_times[0] if start_times else 0.0
-            if scene_end is None:
-                if i + 1 < len(scenes):
-                    scene_end = scene_boundaries[i + 1]["start"] if scene_boundaries else end_times[-1] if end_times else 10.0
-                else:
-                    scene_end = end_times[-1] if end_times else 10.0
-
-            scene_boundaries.append({
-                "scene_index": i,
-                "start": scene_start,
-                "end": scene_end,
-            })
-        
-        for i in range(len(scene_boundaries) - 1):
-            scene_boundaries[i]["end"] = scene_boundaries[i + 1]["start"]
-        
-        if scene_boundaries:
-            scene_boundaries[-1]["end"] = end_times[-1] if end_times else 10.0
-        
+        scene_boundaries = _match_scenes_to_timestamps(
+            scenes,
+            alignment.characters,
+            alignment.character_start_times_seconds,
+            alignment.character_end_times_seconds
+        )
         print(f"  Created {len(scene_boundaries)} scene boundaries")
     else:
         print(f"  WARNING: No alignment data received, using fallback boundaries")
-        for i in range(len(scenes)):
-            scene_boundaries.append({
-                "scene_index": i,
-                "start": i * 5.0,
-                "end": (i + 1) * 5.0,
-            })
+        scene_boundaries = _create_fallback_boundaries(len(scenes))
 
     if run_dir:
         boundaries_path = run_dir / "audio" / "boundaries.json"
@@ -260,55 +290,16 @@ def generate_chunked_audio(scenes: list, model: str | None = None, voice_id: str
     scene_boundaries = []
     if all_characters:
         print(f"  Processing {len(all_characters)} character timestamps...")
-        full_narration_chars = list(full_narration)
-        char_index = 0
-        
-        for i, scene in enumerate(scenes):
-            narration = scene["narration"]
-            scene_start = None
-            scene_end = None
-            
-            narration_chars = list(narration)
-            narration_pos = 0
-            
-            while char_index < len(all_characters) and narration_pos < len(narration_chars):
-                if all_characters[char_index].lower() == narration_chars[narration_pos].lower():
-                    if scene_start is None:
-                        scene_start = all_start_times[char_index]
-                    narration_pos += 1
-                    if narration_pos >= len(narration_chars):
-                        scene_end = all_end_times[char_index]
-                char_index += 1
-            
-            if scene_start is None:
-                scene_start = all_start_times[0] if all_start_times else 0.0
-            if scene_end is None:
-                if i + 1 < len(scenes):
-                    scene_end = scene_boundaries[i + 1]["start"] if scene_boundaries else all_end_times[-1] if all_end_times else 10.0
-                else:
-                    scene_end = all_end_times[-1] if all_end_times else 10.0
-            
-            scene_boundaries.append({
-                "scene_index": i,
-                "start": scene_start,
-                "end": scene_end,
-            })
-        
-        for i in range(len(scene_boundaries) - 1):
-            scene_boundaries[i]["end"] = scene_boundaries[i + 1]["start"]
-        
-        if scene_boundaries:
-            scene_boundaries[-1]["end"] = all_end_times[-1] if all_end_times else 10.0
-        
+        scene_boundaries = _match_scenes_to_timestamps(
+            scenes,
+            all_characters,
+            all_start_times,
+            all_end_times
+        )
         print(f"  Created {len(scene_boundaries)} scene boundaries")
     else:
         print(f"  WARNING: No alignment data received, using fallback boundaries")
-        for i in range(len(scenes)):
-            scene_boundaries.append({
-                "scene_index": i,
-                "start": i * 5.0,
-                "end": (i + 1) * 5.0,
-            })
+        scene_boundaries = _create_fallback_boundaries(len(scenes))
     
     if run_dir:
         boundaries_path = run_dir / "audio" / "boundaries.json"
@@ -352,3 +343,68 @@ def split_audio_by_boundaries(full_audio_path: str, boundaries: list, run_dir: P
 
     print(f"  Split complete: {len(split_paths)} audio clips")
     return split_paths
+
+
+def regenerate_boundaries(run_dir: Path, model: str | None = None, voice_id: str | None = None) -> tuple[str, dict]:
+    """Regenerate boundaries.json from existing full_audio.mp3 and script.json.
+    
+    This is useful when boundaries.json is missing or outdated.
+    """
+    import json
+    
+    script_path = run_dir / "script.json"
+    full_audio_path = run_dir / "audio" / "full_audio.mp3"
+    
+    if not script_path.exists():
+        raise FileNotFoundError(f"No script.json found in {run_dir}")
+    if not full_audio_path.exists():
+        raise FileNotFoundError(f"No full_audio.mp3 found in {run_dir / 'audio'}")
+    
+    with open(script_path) as f:
+        script = json.load(f)
+    
+    scenes = script.get("scenes", [])
+    if not scenes:
+        raise ValueError("No scenes found in script.json")
+    
+    full_narration = " ".join(scene["narration"] for scene in scenes)
+    
+    print(f"  Regenerating boundaries for {len(scenes)} scenes...")
+    print(f"  Total narration length: {len(full_narration)} characters")
+    
+    client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    
+    try:
+        result = client.text_to_speech.convert_with_timestamps(
+            voice_id=voice_id or ELEVENLABS_VOICE_ID,
+            text=full_narration,
+            model_id=model or ELEVENLABS_MODEL,
+            output_format="mp3_44100_128",
+        )
+        print(f"  API call completed, processing alignment data...")
+    except Exception as e:
+        print(f"  ERROR: ElevenLabs API call failed: {e}")
+        raise
+    
+    alignment = result.alignment
+    scene_boundaries = []
+    
+    if alignment and alignment.characters:
+        print(f"  Processing {len(alignment.characters)} character timestamps...")
+        scene_boundaries = _match_scenes_to_timestamps(
+            scenes,
+            alignment.characters,
+            alignment.character_start_times_seconds,
+            alignment.character_end_times_seconds
+        )
+        print(f"  Created {len(scene_boundaries)} scene boundaries")
+    else:
+        print(f"  WARNING: No alignment data received, using fallback boundaries")
+        scene_boundaries = _create_fallback_boundaries(len(scenes))
+    
+    boundaries_path = run_dir / "audio" / "boundaries.json"
+    with open(boundaries_path, "w") as f:
+        json.dump(scene_boundaries, f, indent=2)
+    print(f"  Saved boundaries to: {boundaries_path}")
+    
+    return str(full_audio_path), {"boundaries": scene_boundaries}

@@ -38,7 +38,7 @@ from momentary.config import (
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_image, generate_all_images, generate_thumbnail
-from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries
+from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries, regenerate_boundaries
 from momentary.video_assembler import assemble_video, get_audio_duration
 
 
@@ -756,31 +756,41 @@ with tab_test_split:
                 st.error("No script.json found in this run")
                 scenes = []
 
-            if st.button("Test Split Audio", disabled=not full_audio_path.exists() or not scenes):
-                try:
-                    boundaries_path = run_dir / "audio" / "boundaries.json"
-                    if boundaries_path.exists():
-                        with open(boundaries_path) as f:
-                            boundaries = json.load(f)
-                        st.info(f"Loaded {len(boundaries)} saved boundaries from boundaries.json")
-                    else:
-                        st.warning("No saved boundaries found, using dummy 5s intervals")
-                        boundaries = []
-                        for i, scene in enumerate(scenes):
-                            boundaries.append({
-                                "scene_index": i,
-                                "start": i * 5.0,
-                                "end": (i + 1) * 5.0,
-                            })
+            boundaries_path = run_dir / "audio" / "boundaries.json"
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("Test Split Audio", disabled=not full_audio_path.exists() or not scenes):
+                    try:
+                        if boundaries_path.exists():
+                            with open(boundaries_path) as f:
+                                boundaries = json.load(f)
+                            st.info(f"Loaded {len(boundaries)} saved boundaries from boundaries.json")
+                        else:
+                            st.warning("No saved boundaries found, regenerating...")
+                            _, timestamp_data = regenerate_boundaries(run_dir)
+                            boundaries = timestamp_data["boundaries"]
+                            st.success(f"Regenerated {len(boundaries)} boundaries")
 
-                    with st.spinner("Splitting audio..."):
-                        audio_paths = split_audio_by_boundaries(str(full_audio_path), boundaries, run_dir=run_dir)
-                        st.success(f"Successfully split into {len(audio_paths)} audio clips")
-                        
-                        for path in audio_paths:
-                            st.write(f"- {Path(path).name}")
-                except Exception as e:
-                    st.error(f"Error splitting audio: {e}")
+                        with st.spinner("Splitting audio..."):
+                            audio_paths = split_audio_by_boundaries(str(full_audio_path), boundaries, run_dir=run_dir)
+                            st.success(f"Successfully split into {len(audio_paths)} audio clips")
+                            
+                            for path in audio_paths:
+                                st.write(f"- {Path(path).name}")
+                    except Exception as e:
+                        st.error(f"Error splitting audio: {e}")
+            
+            with col2:
+                if st.button("Regenerate Boundaries", disabled=not full_audio_path.exists() or not scenes):
+                    try:
+                        with st.spinner("Regenerating boundaries from audio..."):
+                            _, timestamp_data = regenerate_boundaries(run_dir)
+                            boundaries = timestamp_data["boundaries"]
+                            st.success(f"Regenerated {len(boundaries)} boundaries and saved to boundaries.json")
+                    except Exception as e:
+                        st.error(f"Error regenerating boundaries: {e}")
     else:
         st.info("No runs available. Generate a video first.")
 
