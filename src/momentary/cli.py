@@ -147,8 +147,7 @@ def generate(
 
     if "thumbnail_prompt" in script:
         console.print(f"\n[bold]Generating thumbnail...[/bold]")
-        thumbnail_text = script.get("thumbnail_text", "")
-        thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, append_style=append_style, thumbnail_text=thumbnail_text, run_dir=run_dir)
+        thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], thumbnail_text=script.get("thumbnail_text", ""), model=image_model, style=style, append_style=append_style, run_dir=run_dir)
         console.print(f"  Thumbnail: [bold]{thumbnail_path}[/bold]")
 
     if stop_after == "images":

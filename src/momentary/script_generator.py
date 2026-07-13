@@ -76,9 +76,9 @@ IMPORTANT IMAGE PROMPT GUIDELINES:
 - Make prompts specific enough to generate consistent style across scenes
 - CRITICAL: Every image_prompt must fully incorporate the visual style described above (line quality, background treatment, character design, lighting, overall aesthetic)
 
-THUMBNAIL PROMPT: Create a visual description for an eye-catching YouTube thumbnail that fully incorporates the visual style described above. Make it bold, simple, and attention-grabbing. Focus on one key visual element that represents the video's core idea. Include all style details (line quality, background, character design, etc.).
+THUMBNAIL PROMPT: Create a visual description for an eye-catching YouTube thumbnail that fully incorporates the visual style described above. Make it bold, simple, and attention-grabbing. Focus on one key visual element that represents the video's core idea. Include all style details (line quality, background, character design, etc.). IMPORTANT: Include the clickbait text as part of the visual description, describing how it should look in the image (font style, color, position, etc.).
 
-THUMBNAIL TEXT: Create a short, punchy clickbait text (2-5 words) that will be overlaid on the thumbnail. Make it curiosity-inducing, dramatic, or surprising. Examples: "YOU WON'T BELIEVE", "THE TRUTH", "SHOCKING", "NEVER DO THIS", "SECRET REVEALED".
+THUMBNAIL TEXT: Create a short, punchy clickbait text (2-5 words) that will be displayed in the thumbnail. Make it curiosity-inducing, dramatic, or surprising. Examples: "YOU WON'T BELIEVE", "THE TRUTH", "SHOCKING", "NEVER DO THIS", "SECRET REVEALED".
 
 DESCRIPTION: Write a YouTube description that:
 - Starts with a hook that creates curiosity

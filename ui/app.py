@@ -506,8 +506,7 @@ with tab_pipeline:
             script = st.session_state.script
             if "thumbnail_prompt" in script:
                 with st.spinner("Generating thumbnail..."):
-                    thumbnail_text = script.get("thumbnail_text", "")
-                    thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, append_style=append_style, thumbnail_text=thumbnail_text, run_dir=run_dir)
+                    thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], thumbnail_text=script.get("thumbnail_text", ""), model=image_model, style=style, append_style=append_style, run_dir=run_dir)
                     st.session_state.thumbnail_path = thumbnail_path
                     st.success(f"Thumbnail generated")
             
