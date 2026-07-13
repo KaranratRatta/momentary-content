@@ -249,6 +249,34 @@ def test_prompt_image_text_guideline():
     assert "text" in prompt.lower() and "sparingly" in prompt.lower(), "Should mention using text sparingly in images"
 
 
+def test_prompt_concise_style():
+    """Prompt should emphasize concise, deep-dive style."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="",
+        target_duration_seconds=None,
+        video_idea=""
+    )
+    assert "concise" in prompt.lower(), "Should mention concise style"
+    assert "deep-dive" in prompt.lower() or "deep dive" in prompt.lower(), "Should mention deep-dive approach"
+    assert "direct" in prompt.lower(), "Should mention direct delivery"
+    assert "minimal filler" in prompt.lower() or "filler" in prompt.lower(), "Should mention minimal filler words"
+
+
+def test_prompt_research_instruction():
+    """Prompt should instruct LLM to base script on provided research."""
+    prompt = _build_system_prompt(
+        num_scenes=7,
+        theme="Educational",
+        research_context="Some research facts",
+        target_duration_seconds=None,
+        video_idea=""
+    )
+    assert "research" in prompt.lower(), "Should mention research"
+    assert "base your script" in prompt.lower() or "based on" in prompt.lower(), "Should instruct to base script on research"
+
+
 def test_generate_script_user_prompt_with_duration():
     """User prompt should include duration when provided."""
     from momentary.script_generator import generate_script
