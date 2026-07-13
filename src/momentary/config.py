@@ -190,15 +190,11 @@ STORYBOOK_STYLE_PROMPT = (
 
 LAZY_DOODLE_STYLE_PROMPT = (
     "lazy hand-drawn doodle, "
-    "very wobbly imperfect shaky lines like quick sketch on napkin, "
     "white background by default unless scene requires time of day or mood, "
-    "human characters as simple stick figures with round white heads, "
-    "eyes that match the emotion (dots for neutral, closed lines for sleep, wide circles for surprise, upward curves for happy), "
+    "human characters as simple stick figures with round white heads, no noses, "
     "minimal or no lighting/shadows/depth depends on the scene, "
-    "crude casual linework with visible hand tremor, "
     "flat colors with no shading or highlights, "
-    "intentionally sloppy and unfinished looking, "
-    "no glossy AI look, no perfect lines, no smooth rendering, "
+    "no glossy AI look, no smooth rendering, "
     "no photorealism, no 3D, no dramatic lighting"
 )
 
@@ -245,6 +241,14 @@ NARRATION_THEMES = {
 }
 
 DEFAULT_THEME = "Educational"
+
+STOP_AFTER_STAGES = {
+    "Full Pipeline": "video",
+    "After Images": "images",
+    "After Voice": "voice",
+}
+
+DEFAULT_STOP_AFTER = "video"
 
 RESEARCH_PROMPT = """You are a research assistant. Given a topic, provide key facts, interesting angles, and notable details that would make a video script more accurate and engaging.
 

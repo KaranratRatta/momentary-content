@@ -49,6 +49,11 @@ uv run momentary generate "Your Topic" --density "More"      # 2x images
 uv run momentary generate "Your Topic" --density "Maximum"   # 3x images
 uv run momentary generate "Your Topic" --density "Fewer"     # 0.5x images
 
+# Stop pipeline after specific stage
+uv run momentary generate "Your Topic" --stop-after "After Images"  # Stop after images/thumbnail
+uv run momentary generate "Your Topic" --stop-after "After Voice"   # Stop after voice generation
+uv run momentary generate "Your Topic" --stop-after "Full Pipeline" # Run full pipeline (default)
+
 # Skip research step
 uv run momentary generate "Your Topic" --no-research
 

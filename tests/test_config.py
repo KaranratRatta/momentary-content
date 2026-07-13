@@ -13,6 +13,8 @@ from momentary.config import (
     ELEVENLABS_VOICE_ID,
     NARRATION_THEMES,
     DEFAULT_THEME,
+    STOP_AFTER_STAGES,
+    DEFAULT_STOP_AFTER,
     get_next_run_number,
     save_run_config,
 )
@@ -153,3 +155,24 @@ def test_save_run_config_creates_file(tmp_path):
         loaded = json.load(f)
     
     assert loaded == config, "Config should match saved data"
+
+
+def test_default_stop_after_exists_in_stop_after_stages():
+    """DEFAULT_STOP_AFTER must be a value in STOP_AFTER_STAGES."""
+    assert DEFAULT_STOP_AFTER in STOP_AFTER_STAGES.values(), (
+        f"DEFAULT_STOP_AFTER '{DEFAULT_STOP_AFTER}' not found in STOP_AFTER_STAGES values: {list(STOP_AFTER_STAGES.values())}"
+    )
+
+
+def test_stop_after_stages_selectbox_index():
+    """Test that we can find the index for stop_after selectbox without ValueError."""
+    values = list(STOP_AFTER_STAGES.values())
+    index = values.index(DEFAULT_STOP_AFTER)
+    assert 0 <= index < len(values)
+
+
+def test_stop_after_stages_has_expected_values():
+    """STOP_AFTER_STAGES should have expected pipeline stages."""
+    assert "video" in STOP_AFTER_STAGES.values(), "Should have 'video' stage"
+    assert "images" in STOP_AFTER_STAGES.values(), "Should have 'images' stage"
+    assert "voice" in STOP_AFTER_STAGES.values(), "Should have 'voice' stage"

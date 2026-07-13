@@ -15,6 +15,7 @@ from momentary.config import (
     DEFAULT_IMAGE_DENSITY,
     DEFAULT_RESEARCH,
     DEFAULT_STYLE,
+    DEFAULT_STOP_AFTER,
     calculate_scenes,
     create_run_directory,
     save_run_config,
@@ -26,6 +27,7 @@ from momentary.config import (
     NARRATION_THEMES,
     IMAGE_DENSITY,
     STYLE_PROMPTS,
+    STOP_AFTER_STAGES,
 )
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_all_images, generate_image, generate_thumbnail
@@ -72,6 +74,7 @@ def generate(
     style: str = typer.Option(DEFAULT_STYLE, "--style", "-s", help=f"Visual style: {', '.join(STYLE_PROMPTS.keys())}"),
     research: bool = typer.Option(DEFAULT_RESEARCH, "--research/--no-research", help="Research topic before writing script"),
     append_style: bool = typer.Option(False, "--append-style/--no-append-style", help="Append style description to image prompts (default: no, LLM incorporates style)"),
+    stop_after: str = typer.Option(DEFAULT_STOP_AFTER, "--stop-after", help=f"Stop pipeline after stage: {', '.join(STOP_AFTER_STAGES.keys())}"),
     llm_model: str = typer.Option(None, "--llm-model", help="OpenRouter model (default: from .env)"),
     image_model: str = typer.Option(None, "--image-model", help="Fal.ai image model (default: from .env)"),
     voice_model: str = typer.Option(None, "--voice-model", help="ElevenLabs TTS model (default: from .env)"),
@@ -112,6 +115,7 @@ def generate(
         "style": style,
         "research": research,
         "append_style": append_style,
+        "stop_after": stop_after,
         "llm_model": llm_model or OPENROUTER_MODEL,
         "image_model": image_model or FAL_IMAGE_MODEL,
         "voice_model": voice_model or ELEVENLABS_MODEL,
@@ -119,6 +123,7 @@ def generate(
     save_run_config(run_dir, run_config)
     
     console.print(f"  Run directory: [bold]{run_dir}[/bold]")
+    console.print(f"  Stop after: [bold]{stop_after}[/bold]")
 
     research_context = ""
     if research:
@@ -145,6 +150,10 @@ def generate(
         thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, append_style=append_style, run_dir=run_dir)
         console.print(f"  Thumbnail: [bold]{thumbnail_path}[/bold]")
 
+    if stop_after == "images":
+        console.print(Panel(f"[bold green]Stopped after image generation[/bold green]\nRun directory: [bold]{run_dir}[/bold]", title="Pipeline Stopped", border_style="yellow"))
+        return
+
     console.print(f"\n[bold][{'4' if research else '3'}/5] Generating voice narration...[/bold]")
     try:
         if audio_mode == "Single Audio":
@@ -163,6 +172,10 @@ def generate(
     except Exception as e:
         console.print(f"  [bold red]ERROR:[/bold red] Voice generation failed: {e}")
         raise
+
+    if stop_after == "voice":
+        console.print(Panel(f"[bold green]Stopped after voice generation[/bold green]\nRun directory: [bold]{run_dir}[/bold]", title="Pipeline Stopped", border_style="yellow"))
+        return
 
     console.print(f"\n[bold][{'5' if research else '4'}/5] Assembling video...[/bold]")
     output_path = assemble_video(image_paths, audio_paths, title, motion=motion.lower().replace(" ", "_"), run_dir=run_dir)

@@ -121,6 +121,11 @@ uv run momentary generate "Topic" --density "More"      # 2x images
 uv run momentary generate "Topic" --density "Maximum"   # 3x images
 uv run momentary generate "Topic" --density "Fewer"     # 0.5x images
 
+# Stop pipeline after specific stage
+uv run momentary generate "Topic" --stop-after "After Images"  # Stop after images/thumbnail
+uv run momentary generate "Topic" --stop-after "After Voice"   # Stop after voice generation
+uv run momentary generate "Topic" --stop-after "Full Pipeline" # Run full pipeline (default)
+
 # Component testing
 uv run momentary script "Topic" -d 3 -t "Educational" -s "Anime"
 uv run momentary image "Prompt"

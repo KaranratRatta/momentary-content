@@ -16,6 +16,8 @@ from momentary.config import (
     DEFAULT_THEME,
     DEFAULT_IMAGE_DENSITY,
     DEFAULT_RESEARCH,
+    DEFAULT_STYLE,
+    DEFAULT_STOP_AFTER,
     calculate_scenes,
     create_run_directory,
     save_run_config,
@@ -24,11 +26,11 @@ from momentary.config import (
     ELEVENLABS_MODELS,
     ELEVENLABS_VOICES,
     STYLE_PROMPTS,
-    DEFAULT_STYLE,
     MOTION_EFFECTS,
     AUDIO_MODES,
     NARRATION_THEMES,
     IMAGE_DENSITY,
+    STOP_AFTER_STAGES,
     OPENROUTER_MODEL,
     FAL_IMAGE_MODEL,
     ELEVENLABS_MODEL,
@@ -313,6 +315,19 @@ with st.sidebar:
     else:
         st.caption("Generates separate audio per scene")
 
+    st.subheader("Pipeline Control")
+    stop_after = st.selectbox(
+        "Stop After",
+        options=list(STOP_AFTER_STAGES.keys()),
+        index=list(STOP_AFTER_STAGES.values()).index(DEFAULT_STOP_AFTER),
+    )
+    if stop_after == "After Images":
+        st.caption("Stops after generating images and thumbnail")
+    elif stop_after == "After Voice":
+        st.caption("Stops after generating voice narration")
+    else:
+        st.caption("Runs full pipeline to generate video")
+
     st.subheader("Voice Generation")
     voice_model = st.selectbox(
         "TTS Model",
@@ -427,6 +442,7 @@ with tab_pipeline:
             "research": research,
             "style": style,
             "append_style": append_style,
+            "stop_after": stop_after,
             "llm_model": llm_model or OPENROUTER_MODEL,
             "image_model": image_model or FAL_IMAGE_MODEL,
             "voice_model": voice_model or ELEVENLABS_MODEL,
@@ -493,6 +509,13 @@ with tab_pipeline:
                     thumbnail_path = generate_thumbnail(script["thumbnail_prompt"], model=image_model, style=style, append_style=append_style, run_dir=run_dir)
                     st.session_state.thumbnail_path = thumbnail_path
                     st.success(f"Thumbnail generated")
+            
+            if stop_after == "After Images":
+                st.session_state.generating = False
+                st.session_state.generation_step = 0
+                st.success(f"Pipeline stopped after image generation. Run directory: `{run_dir}`")
+                st.stop()
+            
             st.rerun()
 
         voice_step = thumbnail_step + 1
@@ -524,6 +547,13 @@ with tab_pipeline:
                     st.session_state.generating = False
                     st.session_state.generation_step = 0
                     st.stop()
+            
+            if stop_after == "After Voice":
+                st.session_state.generating = False
+                st.session_state.generation_step = 0
+                st.success(f"Pipeline stopped after voice generation. Run directory: `{run_dir}`")
+                st.stop()
+            
             st.rerun()
 
         assemble_step = voice_step + 1
