@@ -69,7 +69,7 @@ Each scene should have:
 - duration_hint: estimated seconds for this scene based on narration length
 
 IMPORTANT IMAGE PROMPT GUIDELINES:
-- Human characters: simple stick figures with round white heads
+- Human characters: simple stick figures with round white heads, simple shapes eyes (dots, line, heart, big circles for shock emotion, etc.), no noses
 - Objects/environments: more detailed than characters, but still in a hand-drawn cartoon style
 - Include specific lighting, mood, and color details
 - Describe the composition and what's happening in the scene
