@@ -17,6 +17,11 @@ from momentary.config import (
     DEFAULT_STOP_AFTER,
     get_next_run_number,
     save_run_config,
+    format_duration,
+    get_audio_dir,
+    get_images_dir,
+    get_openrouter_client,
+    get_elevenlabs_client,
 )
 
 
@@ -176,3 +181,64 @@ def test_stop_after_stages_has_expected_values():
     assert "video" in STOP_AFTER_STAGES.values(), "Should have 'video' stage"
     assert "images" in STOP_AFTER_STAGES.values(), "Should have 'images' stage"
     assert "voice" in STOP_AFTER_STAGES.values(), "Should have 'voice' stage"
+
+
+def test_format_duration_seconds_only():
+    """format_duration should format seconds correctly."""
+    assert format_duration(1) == "1 second"
+    assert format_duration(30) == "30 seconds"
+    assert format_duration(59) == "59 seconds"
+
+
+def test_format_duration_minutes_only():
+    """format_duration should format minutes correctly."""
+    assert format_duration(60) == "1 minute"
+    assert format_duration(120) == "2 minutes"
+    assert format_duration(180) == "3 minutes"
+
+
+def test_format_duration_minutes_and_seconds():
+    """format_duration should format minutes and seconds correctly."""
+    assert format_duration(90) == "1 minute 30 seconds"
+    assert format_duration(121) == "2 minutes 1 second"
+    assert format_duration(150) == "2 minutes 30 seconds"
+
+
+def test_get_audio_dir_with_run_dir():
+    """get_audio_dir should return run_dir/audio when run_dir is provided."""
+    run_dir = Path("/tmp/test_run")
+    result = get_audio_dir(run_dir)
+    assert result == run_dir / "audio"
+
+
+def test_get_audio_dir_without_run_dir():
+    """get_audio_dir should return temp/audio when run_dir is None."""
+    result = get_audio_dir(None)
+    assert result == Path("temp/audio")
+
+
+def test_get_images_dir_with_run_dir():
+    """get_images_dir should return run_dir/images when run_dir is provided."""
+    run_dir = Path("/tmp/test_run")
+    result = get_images_dir(run_dir)
+    assert result == run_dir / "images"
+
+
+def test_get_images_dir_without_run_dir():
+    """get_images_dir should return temp/images when run_dir is None."""
+    result = get_images_dir(None)
+    assert result == Path("temp/images")
+
+
+def test_get_openrouter_client():
+    """get_openrouter_client should return an OpenAI client."""
+    from openai import OpenAI
+    client = get_openrouter_client()
+    assert isinstance(client, OpenAI)
+
+
+def test_get_elevenlabs_client():
+    """get_elevenlabs_client should return an ElevenLabs client."""
+    from elevenlabs import ElevenLabs
+    client = get_elevenlabs_client()
+    assert isinstance(client, ElevenLabs)

@@ -1,7 +1,7 @@
 import requests
 import fal_client
 from pathlib import Path
-from momentary.config import FAL_IMAGE_MODEL, STYLE_PROMPTS, DEFAULT_STYLE, VIDEO_WIDTH, VIDEO_HEIGHT
+from momentary.config import FAL_IMAGE_MODEL, STYLE_PROMPTS, DEFAULT_STYLE, VIDEO_WIDTH, VIDEO_HEIGHT, get_images_dir
 
 
 def generate_image(scene_prompt: str, scene_index: int, model: str | None = None, style: str | None = None, append_style: bool = False, run_dir: Path | None = None) -> str:
@@ -29,10 +29,7 @@ def generate_image(scene_prompt: str, scene_index: int, model: str | None = None
     else:
         raise ValueError(f"No image in Fal.ai response: {result}")
 
-    if run_dir:
-        images_dir = run_dir / "images"
-    else:
-        images_dir = Path("temp/images")
+    images_dir = get_images_dir(run_dir)
 
     output_path = images_dir / f"scene_{scene_index:03d}.png"
     response = requests.get(image_url)
@@ -45,10 +42,7 @@ def generate_image(scene_prompt: str, scene_index: int, model: str | None = None
 
 
 def generate_all_images(scenes: list, model: str | None = None, style: str | None = None, append_style: bool = False, run_dir: Path | None = None) -> list:
-    if run_dir:
-        images_dir = run_dir / "images"
-    else:
-        images_dir = Path("temp/images")
+    images_dir = get_images_dir(run_dir)
 
     images_dir.mkdir(parents=True, exist_ok=True)
     image_paths = []

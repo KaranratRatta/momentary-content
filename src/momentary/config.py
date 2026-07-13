@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
+from openai import OpenAI
+from elevenlabs import ElevenLabs
 
 load_dotenv()
 
@@ -263,3 +265,78 @@ Focus on:
 Keep it concise but informative. Return as a structured list of key points.
 
 Topic: {topic}"""
+
+
+def format_duration(seconds: float) -> str:
+    """Format seconds to human-readable duration string.
+    
+    Examples:
+        format_duration(30) -> "30 seconds"
+        format_duration(90) -> "1 minute 30 seconds"
+        format_duration(120) -> "2 minutes"
+        format_duration(1) -> "1 second"
+    """
+    if seconds >= 60:
+        minutes = int(seconds // 60)
+        remaining_seconds = int(seconds % 60)
+        
+        minute_str = f"{minutes} minute{'s' if minutes != 1 else ''}"
+        
+        if remaining_seconds == 0:
+            return minute_str
+        else:
+            second_str = f"{remaining_seconds} second{'s' if remaining_seconds != 1 else ''}"
+            return f"{minute_str} {second_str}"
+    else:
+        return f"{int(seconds)} second{'s' if seconds != 1 else ''}"
+
+
+def get_audio_dir(run_dir: Path | None) -> Path:
+    """Get the audio directory path for a run.
+    
+    Args:
+        run_dir: Run directory path, or None for temp directory
+        
+    Returns:
+        Path to audio directory
+    """
+    if run_dir:
+        return run_dir / "audio"
+    else:
+        return Path("temp/audio")
+
+
+def get_images_dir(run_dir: Path | None) -> Path:
+    """Get the images directory path for a run.
+    
+    Args:
+        run_dir: Run directory path, or None for temp directory
+        
+    Returns:
+        Path to images directory
+    """
+    if run_dir:
+        return run_dir / "images"
+    else:
+        return Path("temp/images")
+
+
+def get_openrouter_client() -> OpenAI:
+    """Create an OpenAI client configured for OpenRouter.
+    
+    Returns:
+        OpenAI client instance
+    """
+    return OpenAI(
+        api_key=OPENROUTER_API_KEY,
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+
+def get_elevenlabs_client() -> ElevenLabs:
+    """Create an ElevenLabs client.
+    
+    Returns:
+        ElevenLabs client instance
+    """
+    return ElevenLabs(api_key=ELEVENLABS_API_KEY)

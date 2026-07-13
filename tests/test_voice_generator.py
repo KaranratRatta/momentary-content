@@ -189,7 +189,7 @@ class TestBoundaryAdjustment:
         mock_client = MagicMock()
         mock_client.text_to_speech.convert_with_timestamps.return_value = mock_result
 
-        with patch('momentary.voice_generator.ElevenLabs', return_value=mock_client):
+        with patch('momentary.voice_generator.get_elevenlabs_client', return_value=mock_client):
             audio_path, data = generate_single_audio(scenes, run_dir=tmp_path)
 
         boundaries = data["boundaries"]
@@ -229,7 +229,7 @@ class TestBoundaryAdjustment:
         mock_client = MagicMock()
         mock_client.text_to_speech.convert_with_timestamps.return_value = mock_result
 
-        with patch('momentary.voice_generator.ElevenLabs', return_value=mock_client):
+        with patch('momentary.voice_generator.get_elevenlabs_client', return_value=mock_client):
             with patch('pydub.AudioSegment') as mock_audio:
                 mock_audio.empty.return_value = MagicMock()
                 mock_audio.from_file.return_value = MagicMock()
@@ -310,7 +310,7 @@ class TestRegenerateBoundaries:
         mock_client = MagicMock()
         mock_client.text_to_speech.convert_with_timestamps.return_value = mock_result
         
-        with patch('momentary.voice_generator.ElevenLabs', return_value=mock_client):
+        with patch('momentary.voice_generator.get_elevenlabs_client', return_value=mock_client):
             audio_path, data = regenerate_boundaries(tmp_path)
         
         assert "boundaries" in data

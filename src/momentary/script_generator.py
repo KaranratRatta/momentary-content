@@ -1,7 +1,16 @@
 import json
 from pathlib import Path
-from openai import OpenAI
-from momentary.config import OPENROUTER_API_KEY, OPENROUTER_MODEL, NARRATION_THEMES, DEFAULT_THEME, RESEARCH_PROMPT, STYLE_PROMPTS, DEFAULT_STYLE
+from momentary.config import (
+    OPENROUTER_API_KEY, 
+    OPENROUTER_MODEL, 
+    NARRATION_THEMES, 
+    DEFAULT_THEME, 
+    RESEARCH_PROMPT, 
+    STYLE_PROMPTS, 
+    DEFAULT_STYLE,
+    get_openrouter_client,
+    format_duration,
+)
 
 
 def _build_system_prompt(num_scenes: int, theme: str = "Educational", research_context: str = "", target_duration_seconds: float | None = None, video_idea: str = "", style: str = DEFAULT_STYLE) -> str:
@@ -52,8 +61,7 @@ VISUAL STYLE: {style_description}
 
 IMPORTANT: When writing image_prompt and thumbnail_prompt, you MUST incorporate ALL elements of the visual style described above. Include details about line quality, background treatment, character design, lighting, and overall aesthetic in every prompt.
 
-HOOK STRUCTURE: The first 1-5 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching. Don't reveal the answer or main point yet - just hint at something interesting coming.
-
+HOOK STRUCTURE: The first 1-4 scenes MUST be a hook that opens a loop. Tease the payoff without giving it away. Create curiosity that makes viewers want to keep watching.
 SPOKEN ENGLISH: Write like you're talking to others, not writing an essay. Use:
 - Contractions
 - Casual transitions
@@ -116,26 +124,15 @@ def generate_script(
     style: str = DEFAULT_STYLE,
     run_dir: Path | None = None,
 ) -> dict:
-    client = OpenAI(
-        api_key=OPENROUTER_API_KEY,
-        base_url="https://openrouter.ai/api/v1",
-    )
-
     system_prompt = _build_system_prompt(num_scenes, theme, research_context, target_duration_seconds, video_idea, style)
     
     if target_duration_seconds:
-        if target_duration_seconds >= 60:
-            minutes = int(target_duration_seconds // 60)
-            seconds = int(target_duration_seconds % 60)
-            if seconds == 0:
-                duration_str = f"{minutes} minute{'s' if minutes != 1 else ''}"
-            else:
-                duration_str = f"{minutes} minute{'s' if minutes != 1 else ''} {seconds} second{'s' if seconds != 1 else ''}"
-        else:
-            duration_str = f"{int(target_duration_seconds)} second{'s' if target_duration_seconds != 1 else ''}"
+        duration_str = format_duration(target_duration_seconds)
         user_prompt = f"Write a video script {duration_str} long about: {topic}"
     else:
         user_prompt = f"Write a video script about: {topic}"
+
+    client = get_openrouter_client()
 
     response = client.chat.completions.create(
         model=model or OPENROUTER_MODEL,
@@ -163,10 +160,7 @@ def generate_script(
 
 
 def research_topic(topic: str, model: str | None = None) -> str:
-    client = OpenAI(
-        api_key=OPENROUTER_API_KEY,
-        base_url="https://openrouter.ai/api/v1",
-    )
+    client = get_openrouter_client()
 
     response = client.chat.completions.create(
         model=model or OPENROUTER_MODEL,

@@ -2,8 +2,13 @@ import base64
 import json
 import re
 from pathlib import Path
-from elevenlabs import ElevenLabs
-from momentary.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL
+from momentary.config import (
+    ELEVENLABS_API_KEY, 
+    ELEVENLABS_VOICE_ID, 
+    ELEVENLABS_MODEL,
+    get_audio_dir,
+    get_elevenlabs_client,
+)
 
 
 def _match_scenes_to_timestamps(
@@ -109,7 +114,7 @@ def _split_text_into_chunks(text: str, target_words: int = 175) -> list[str]:
 
 
 def generate_voice(narration: str, scene_index: int, model: str | None = None, voice_id: str | None = None, run_dir: Path | None = None) -> str:
-    client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    client = get_elevenlabs_client()
 
     audio = client.text_to_speech.convert(
         voice_id=voice_id or ELEVENLABS_VOICE_ID,
@@ -118,10 +123,7 @@ def generate_voice(narration: str, scene_index: int, model: str | None = None, v
         output_format="mp3_44100_128",
     )
 
-    if run_dir:
-        audio_dir = run_dir / "audio"
-    else:
-        audio_dir = Path("temp/audio")
+    audio_dir = get_audio_dir(run_dir)
 
     output_path = audio_dir / f"scene_{scene_index:03d}.mp3"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -133,10 +135,7 @@ def generate_voice(narration: str, scene_index: int, model: str | None = None, v
 
 
 def generate_all_voices(scenes: list, model: str | None = None, voice_id: str | None = None, run_dir: Path | None = None) -> list:
-    if run_dir:
-        audio_dir = run_dir / "audio"
-    else:
-        audio_dir = Path("temp/audio")
+    audio_dir = get_audio_dir(run_dir)
 
     audio_dir.mkdir(parents=True, exist_ok=True)
     audio_paths = []
@@ -148,7 +147,7 @@ def generate_all_voices(scenes: list, model: str | None = None, voice_id: str | 
 
 
 def generate_single_audio(scenes: list, model: str | None = None, voice_id: str | None = None, run_dir: Path | None = None) -> tuple[str, dict]:
-    client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    client = get_elevenlabs_client()
 
     full_narration = " ".join(scene["narration"] for scene in scenes)
 
@@ -174,10 +173,7 @@ def generate_single_audio(scenes: list, model: str | None = None, voice_id: str 
         print(f"  ERROR: Failed to decode audio data: {e}")
         raise
 
-    if run_dir:
-        audio_dir = run_dir / "audio"
-    else:
-        audio_dir = Path("temp/audio")
+    audio_dir = get_audio_dir(run_dir)
 
     audio_dir.mkdir(parents=True, exist_ok=True)
     output_path = audio_dir / "full_audio.mp3"
@@ -215,7 +211,7 @@ def generate_chunked_audio(scenes: list, model: str | None = None, voice_id: str
     from pydub import AudioSegment
     import io
     
-    client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    client = get_elevenlabs_client()
     full_narration = " ".join(scene["narration"] for scene in scenes)
     chunks = _split_text_into_chunks(full_narration, chunk_words)
     
@@ -226,10 +222,7 @@ def generate_chunked_audio(scenes: list, model: str | None = None, voice_id: str
     print(f"  Generating chunked audio: {len(chunks)} chunks (~{chunk_words} words each)")
     print(f"  Total narration length: {len(full_narration)} characters")
     
-    if run_dir:
-        audio_dir = run_dir / "audio"
-    else:
-        audio_dir = Path("temp/audio")
+    audio_dir = get_audio_dir(run_dir)
     audio_dir.mkdir(parents=True, exist_ok=True)
     
     chunk_audio_files = []
@@ -319,10 +312,7 @@ def split_audio_by_boundaries(full_audio_path: str, boundaries: list, run_dir: P
     audio = AudioSegment.from_file(full_audio_path)
     print(f"  Audio loaded: {len(audio)}ms")
 
-    if run_dir:
-        audio_dir = run_dir / "audio"
-    else:
-        audio_dir = Path("temp/audio")
+    audio_dir = get_audio_dir(run_dir)
 
     audio_dir.mkdir(parents=True, exist_ok=True)
 
@@ -372,7 +362,7 @@ def regenerate_boundaries(run_dir: Path, model: str | None = None, voice_id: str
     print(f"  Regenerating boundaries for {len(scenes)} scenes...")
     print(f"  Total narration length: {len(full_narration)} characters")
     
-    client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    client = get_elevenlabs_client()
     
     try:
         result = client.text_to_speech.convert_with_timestamps(

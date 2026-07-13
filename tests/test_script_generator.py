@@ -261,7 +261,7 @@ def test_generate_script_user_prompt_with_duration():
     mock_client = MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
     
-    with patch('momentary.script_generator.OpenAI', return_value=mock_client):
+    with patch('momentary.script_generator.get_openrouter_client', return_value=mock_client):
         generate_script("Test topic", num_scenes=3, target_duration_seconds=30.0)
     
     call_args = mock_client.chat.completions.create.call_args
@@ -283,7 +283,7 @@ def test_generate_script_user_prompt_with_minutes():
     mock_client = MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
     
-    with patch('momentary.script_generator.OpenAI', return_value=mock_client):
+    with patch('momentary.script_generator.get_openrouter_client', return_value=mock_client):
         generate_script("Test topic", num_scenes=10, target_duration_seconds=120.0)
     
     call_args = mock_client.chat.completions.create.call_args
@@ -304,7 +304,7 @@ def test_generate_script_user_prompt_without_duration():
     mock_client = MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
     
-    with patch('momentary.script_generator.OpenAI', return_value=mock_client):
+    with patch('momentary.script_generator.get_openrouter_client', return_value=mock_client):
         generate_script("Test topic", num_scenes=5, target_duration_seconds=None)
     
     call_args = mock_client.chat.completions.create.call_args
