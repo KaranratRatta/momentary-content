@@ -190,7 +190,7 @@ STORYBOOK_STYLE_PROMPT = (
 )
 
 LAZY_DOODLE_STYLE_PROMPT = (
-    "lazy hand-drawn but sharp, not messy scribbled, "
+    "lazy hand-drawn, sharp lines, "
     "color background for scene requires time of day or mood, else use white background, "
     "human characters as simple stick figures with round white heads, no noses, eyes matching emotion and action,"
     "minimal or no lighting/shadows/depth depends on the scene, "
