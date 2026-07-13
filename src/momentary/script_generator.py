@@ -122,7 +122,20 @@ def generate_script(
     )
 
     system_prompt = _build_system_prompt(num_scenes, theme, research_context, target_duration_seconds, video_idea, style)
-    user_prompt = f"Write a video script about: {topic}"
+    
+    if target_duration_seconds:
+        if target_duration_seconds >= 60:
+            minutes = int(target_duration_seconds // 60)
+            seconds = int(target_duration_seconds % 60)
+            if seconds == 0:
+                duration_str = f"{minutes} minute{'s' if minutes != 1 else ''}"
+            else:
+                duration_str = f"{minutes} minute{'s' if minutes != 1 else ''} {seconds} second{'s' if seconds != 1 else ''}"
+        else:
+            duration_str = f"{int(target_duration_seconds)} second{'s' if target_duration_seconds != 1 else ''}"
+        user_prompt = f"Write a video script {duration_str} long about: {topic}"
+    else:
+        user_prompt = f"Write a video script about: {topic}"
 
     response = client.chat.completions.create(
         model=model or OPENROUTER_MODEL,

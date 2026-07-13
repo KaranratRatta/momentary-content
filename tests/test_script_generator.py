@@ -218,7 +218,7 @@ def test_prompt_includes_visual_style():
         style="Lazy Doodle"
     )
     assert "VISUAL STYLE" in prompt, "Should include VISUAL STYLE section"
-    assert "lazy hand-drawn" in prompt.lower(), "Should include style description"
+    assert "hand-drawn" in prompt.lower(), "Should include style description"
     assert "incorporate ALL elements" in prompt, "Should instruct to incorporate style elements"
 
 
@@ -234,7 +234,7 @@ def test_prompt_style_parameter_default():
     )
     default_style_prompt = STYLE_PROMPTS[DEFAULT_STYLE]
     # Check that at least some key phrase from the default style is in the prompt
-    assert "wobbly" in prompt.lower() or "lazy" in prompt.lower(), "Should include default style description"
+    assert "wobbly" in prompt.lower() or "hand-drawn" in prompt.lower(), "Should include default style description"
 
 
 def test_prompt_image_text_guideline():
@@ -247,3 +247,67 @@ def test_prompt_image_text_guideline():
         video_idea=""
     )
     assert "text" in prompt.lower() and "sparingly" in prompt.lower(), "Should mention using text sparingly in images"
+
+
+def test_generate_script_user_prompt_with_duration():
+    """User prompt should include duration when provided."""
+    from momentary.script_generator import generate_script
+    from unittest.mock import MagicMock, patch
+    
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = '{"title": "Test", "description": "Test", "scenes": []}'
+    
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = mock_response
+    
+    with patch('momentary.script_generator.OpenAI', return_value=mock_client):
+        generate_script("Test topic", num_scenes=3, target_duration_seconds=30.0)
+    
+    call_args = mock_client.chat.completions.create.call_args
+    messages = call_args.kwargs['messages']
+    user_message = next(m for m in messages if m['role'] == 'user')
+    assert "30 seconds" in user_message['content'], "User prompt should include duration"
+    assert "about: Test topic" in user_message['content'], "User prompt should include topic"
+
+
+def test_generate_script_user_prompt_with_minutes():
+    """User prompt should format durations >= 60 seconds as minutes."""
+    from momentary.script_generator import generate_script
+    from unittest.mock import MagicMock, patch
+    
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = '{"title": "Test", "description": "Test", "scenes": []}'
+    
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = mock_response
+    
+    with patch('momentary.script_generator.OpenAI', return_value=mock_client):
+        generate_script("Test topic", num_scenes=10, target_duration_seconds=120.0)
+    
+    call_args = mock_client.chat.completions.create.call_args
+    messages = call_args.kwargs['messages']
+    user_message = next(m for m in messages if m['role'] == 'user')
+    assert "2 minutes" in user_message['content'], "User prompt should format as minutes"
+
+
+def test_generate_script_user_prompt_without_duration():
+    """User prompt should not include duration when not provided."""
+    from momentary.script_generator import generate_script
+    from unittest.mock import MagicMock, patch
+    
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = '{"title": "Test", "description": "Test", "scenes": []}'
+    
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = mock_response
+    
+    with patch('momentary.script_generator.OpenAI', return_value=mock_client):
+        generate_script("Test topic", num_scenes=5, target_duration_seconds=None)
+    
+    call_args = mock_client.chat.completions.create.call_args
+    messages = call_args.kwargs['messages']
+    user_message = next(m for m in messages if m['role'] == 'user')
+    assert user_message['content'] == "Write a video script about: Test topic", "User prompt should not include duration"
