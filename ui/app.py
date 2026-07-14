@@ -39,7 +39,7 @@ from momentary.config import (
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_image, generate_all_images, generate_thumbnail
 from momentary.voice_generator import generate_voice, generate_all_voices, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries, regenerate_boundaries
-from momentary.video_assembler import assemble_video, get_audio_duration
+from momentary.video_assembler import assemble_video, assemble_video_with_boundaries, get_audio_duration
 
 
 st.set_page_config(page_title="Momentary Content", page_icon="", layout="wide", initial_sidebar_state="expanded")
@@ -224,6 +224,10 @@ if "image_paths" not in st.session_state:
     st.session_state.image_paths = None
 if "audio_paths" not in st.session_state:
     st.session_state.audio_paths = None
+if "boundaries" not in st.session_state:
+    st.session_state.boundaries = None
+if "full_audio_path" not in st.session_state:
+    st.session_state.full_audio_path = None
 if "output_path" not in st.session_state:
     st.session_state.output_path = None
 
@@ -309,9 +313,9 @@ with st.sidebar:
         index=list(AUDIO_MODES.values()).index(DEFAULT_AUDIO_MODE),
     )
     if audio_mode == "Single Audio":
-        st.caption("Generates one continuous audio track, more natural flow")
+        st.caption("One continuous audio track, images synced to audio — no splitting")
     elif audio_mode == "Chunked Audio":
-        st.caption("Splits narration into ~175 word chunks, more reliable for long videos")
+        st.caption("Chunks narration for reliability, images synced to audio — no splitting")
     else:
         st.caption("Generates separate audio per scene")
 
@@ -527,20 +531,22 @@ with tab_pipeline:
                     if audio_mode == "Single Audio":
                         full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
                         boundaries = timestamp_data["boundaries"]
-                        st.info("Splitting audio into scenes...")
-                        audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
-                        st.session_state.audio_paths = audio_paths
-                        st.success(f"Generated single audio, split into {len(audio_paths)} clips")
+                        st.session_state.full_audio_path = full_audio_path
+                        st.session_state.boundaries = boundaries
+                        st.session_state.audio_paths = None
+                        st.success(f"Generated single audio with {len(boundaries)} scene boundaries")
                     elif audio_mode == "Chunked Audio":
                         full_audio_path, timestamp_data = generate_chunked_audio(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
                         boundaries = timestamp_data["boundaries"]
-                        st.info("Splitting audio into scenes...")
-                        audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
-                        st.session_state.audio_paths = audio_paths
-                        st.success(f"Generated chunked audio, split into {len(audio_paths)} clips")
+                        st.session_state.full_audio_path = full_audio_path
+                        st.session_state.boundaries = boundaries
+                        st.session_state.audio_paths = None
+                        st.success(f"Generated chunked audio with {len(boundaries)} scene boundaries")
                     else:
                         audio_paths = generate_all_voices(scenes, model=voice_model, voice_id=voice_id, run_dir=run_dir)
                         st.session_state.audio_paths = audio_paths
+                        st.session_state.full_audio_path = None
+                        st.session_state.boundaries = None
                         st.success(f"Generated {len(audio_paths)} audio clips")
                 except Exception as e:
                     st.error(f"Voice generation failed: {e}")
@@ -561,10 +567,9 @@ with tab_pipeline:
             st.session_state.generation_step = assemble_step + 1
             with st.spinner("Assembling video... (this may take a minute)"):
                 image_paths = st.session_state.image_paths
-                audio_paths = st.session_state.audio_paths
                 title = st.session_state.title
 
-                if not image_paths or not audio_paths or not title:
+                if not image_paths or not title:
                     st.error("Missing required data for video assembly. Please restart the generation.")
                     st.session_state.generating = False
                     st.session_state.generation_step = 0
@@ -572,7 +577,16 @@ with tab_pipeline:
 
                 try:
                     motion_value = MOTION_EFFECTS[motion]
-                    output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
+                    if st.session_state.full_audio_path and st.session_state.boundaries:
+                        output_path = assemble_video_with_boundaries(image_paths, st.session_state.full_audio_path, st.session_state.boundaries, title, motion=motion_value, run_dir=run_dir)
+                    else:
+                        audio_paths = st.session_state.audio_paths
+                        if not audio_paths:
+                            st.error("Missing audio data for video assembly. Please restart the generation.")
+                            st.session_state.generating = False
+                            st.session_state.generation_step = 0
+                            st.rerun()
+                        output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
                     st.session_state.output_path = output_path
                     st.session_state.generating = False
                     st.session_state.generation_step = 0
@@ -689,13 +703,18 @@ with tab_assemble:
         if selected_run:
             run_dir = RUNS_DIR / selected_run
             img_files = sorted((run_dir / "images").glob("scene_*.png"))
+            full_audio_path = run_dir / "audio" / "full_audio.mp3"
+            boundaries_path = run_dir / "audio" / "boundaries.json"
             aud_files = sorted((run_dir / "audio").glob("scene_*.mp3"))
 
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Images Available", len(img_files))
             with col2:
-                st.metric("Audio Available", len(aud_files))
+                if full_audio_path.exists() and boundaries_path.exists():
+                    st.metric("Audio", "Full + Boundaries")
+                else:
+                    st.metric("Audio", f"{len(aud_files)} per-scene clips")
 
             motion = st.selectbox(
                 "Motion Effect",
@@ -703,14 +722,16 @@ with tab_assemble:
                 index=list(MOTION_EFFECTS.values()).index(DEFAULT_MOTION),
             )
 
+            has_boundaries_mode = full_audio_path.exists() and boundaries_path.exists()
+            has_per_scene = len(aud_files) > 0
+
             if not img_files:
                 st.warning("No images in this run.")
-            if not aud_files:
+            if not has_boundaries_mode and not has_per_scene:
                 st.warning("No audio in this run.")
 
-            if st.button("Assemble Video", disabled=not img_files or not aud_files):
+            if st.button("Assemble Video", disabled=not img_files or (not has_boundaries_mode and not has_per_scene)):
                 image_paths = [str(p) for p in img_files]
-                audio_paths = [str(p) for p in aud_files]
 
                 script_path = run_dir / "script.json"
                 title = "Untitled"
@@ -721,7 +742,13 @@ with tab_assemble:
 
                 with st.spinner("Assembling..."):
                     motion_value = MOTION_EFFECTS[motion]
-                    output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
+                    if has_boundaries_mode:
+                        with open(boundaries_path) as f:
+                            boundaries = json.load(f)
+                        output_path = assemble_video_with_boundaries(image_paths, str(full_audio_path), boundaries, title, motion=motion_value, run_dir=run_dir)
+                    else:
+                        audio_paths = [str(p) for p in aud_files]
+                        output_path = assemble_video(image_paths, audio_paths, title, motion=motion_value, run_dir=run_dir)
                     st.success(f"Video saved: {output_path}")
                     st.video(output_path)
     else:

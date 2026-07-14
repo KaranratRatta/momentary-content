@@ -32,7 +32,7 @@ from momentary.config import (
 from momentary.script_generator import generate_script, research_topic
 from momentary.image_generator import generate_all_images, generate_image, generate_thumbnail
 from momentary.voice_generator import generate_all_voices, generate_voice, generate_single_audio, generate_chunked_audio, split_audio_by_boundaries, regenerate_boundaries
-from momentary.video_assembler import assemble_video, get_audio_duration
+from momentary.video_assembler import assemble_video, assemble_video_with_boundaries, get_audio_duration
 
 app = typer.Typer(
     name="momentary",
@@ -159,13 +159,11 @@ def generate(
         if audio_mode == "Single Audio":
             full_audio_path, timestamp_data = generate_single_audio(scenes, model=voice_model, run_dir=run_dir)
             boundaries = timestamp_data["boundaries"]
-            audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
-            console.print(f"  Generated single audio, split into {len(audio_paths)} clips")
+            console.print(f"  Generated single audio with {len(boundaries)} scene boundaries")
         elif audio_mode == "Chunked Audio":
             full_audio_path, timestamp_data = generate_chunked_audio(scenes, model=voice_model, run_dir=run_dir)
             boundaries = timestamp_data["boundaries"]
-            audio_paths = split_audio_by_boundaries(full_audio_path, boundaries, run_dir=run_dir)
-            console.print(f"  Generated chunked audio, split into {len(audio_paths)} clips")
+            console.print(f"  Generated chunked audio with {len(boundaries)} scene boundaries")
         else:
             audio_paths = generate_all_voices(scenes, model=voice_model, run_dir=run_dir)
             console.print(f"  Generated {len(audio_paths)} audio clips")
@@ -178,7 +176,10 @@ def generate(
         return
 
     console.print(f"\n[bold][{'5' if research else '4'}/5] Assembling video...[/bold]")
-    output_path = assemble_video(image_paths, audio_paths, title, motion=motion.lower().replace(" ", "_"), run_dir=run_dir)
+    if audio_mode in ("Single Audio", "Chunked Audio"):
+        output_path = assemble_video_with_boundaries(image_paths, full_audio_path, boundaries, title, motion=motion.lower().replace(" ", "_"), run_dir=run_dir)
+    else:
+        output_path = assemble_video(image_paths, audio_paths, title, motion=motion.lower().replace(" ", "_"), run_dir=run_dir)
 
     console.print(Panel(f"[bold green]{output_path}[/bold green]", title="Video Complete!", border_style="green"))
 
@@ -268,20 +269,14 @@ def assemble(
 ):
     """Assemble video from a specific run directory."""
     image_files = sorted((run_dir / "images").glob("scene_*.png"))
-    audio_files = sorted((run_dir / "audio").glob("scene_*.mp3"))
 
     if not image_files:
         console.print(f"[red]No images found in {run_dir / 'images'}[/red]")
         raise typer.Exit(1)
-    if not audio_files:
-        console.print(f"[red]No audio files found in {run_dir / 'audio'}[/red]")
-        raise typer.Exit(1)
 
-    if len(image_files) != len(audio_files):
-        console.print(f"[yellow]Warning: {len(image_files)} images but {len(audio_files)} audio files[/yellow]")
-
-    image_paths = [str(p) for p in image_files]
-    audio_paths = [str(p) for p in audio_files]
+    full_audio_path = run_dir / "audio" / "full_audio.mp3"
+    boundaries_path = run_dir / "audio" / "boundaries.json"
+    audio_files = sorted((run_dir / "audio").glob("scene_*.mp3"))
 
     script_path = run_dir / "script.json"
     title = "Untitled"
@@ -291,8 +286,24 @@ def assemble(
             script = json.load(f)
             title = script.get("title", "Untitled")
 
-    console.print(f"[bold]Assembling video from {len(image_paths)} scenes...[/bold]")
-    output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
+    image_paths = [str(p) for p in image_files]
+
+    if full_audio_path.exists() and boundaries_path.exists():
+        import json
+        with open(boundaries_path) as f:
+            boundaries = json.load(f)
+        console.print(f"[bold]Assembling {len(image_paths)} scenes with full audio + boundaries...[/bold]")
+        output_path = assemble_video_with_boundaries(image_paths, str(full_audio_path), boundaries, title, run_dir=run_dir)
+    elif audio_files:
+        if len(image_paths) != len(audio_files):
+            console.print(f"[yellow]Warning: {len(image_paths)} images but {len(audio_files)} audio files[/yellow]")
+        audio_paths = [str(p) for p in audio_files]
+        console.print(f"[bold]Assembling video from {len(image_paths)} scenes...[/bold]")
+        output_path = assemble_video(image_paths, audio_paths, title, run_dir=run_dir)
+    else:
+        console.print(f"[red]No audio files found in {run_dir / 'audio'}[/red]")
+        raise typer.Exit(1)
+
     console.print(Panel(f"[bold green]{output_path}[/bold green]", title="Video Complete!", border_style="green"))
 
 

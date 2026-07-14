@@ -6,6 +6,7 @@ from moviepy import (
     VideoClip,
     AudioFileClip,
     concatenate_videoclips,
+    CompositeVideoClip,
 )
 from momentary.config import (
     VIDEO_WIDTH,
@@ -149,6 +150,62 @@ def assemble_video(image_paths: list, audio_paths: list, title: str, motion: str
     )
 
     final.close()
+    for clip in clips:
+        clip.close()
+
+    print(f"  Video saved: {output_path}")
+    return str(output_path)
+
+
+def assemble_video_with_boundaries(image_paths: list, full_audio_path: str, boundaries: list, title: str, motion: str = "static", run_dir: Path | None = None) -> str:
+    print("  Assembling video with boundaries...")
+
+    total_duration = max(b["end"] for b in boundaries) if boundaries else 0
+    print(f"  Total duration: {total_duration:.1f}s")
+
+    clips = []
+    for i, (img_path, boundary) in enumerate(zip(image_paths, boundaries)):
+        duration = boundary["end"] - boundary["start"]
+
+        if motion == "variety":
+            effects = ["static", "zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down"]
+            scene_effect = effects[i % len(effects)]
+        else:
+            scene_effect = motion
+
+        print(f"    Scene {i + 1}: {duration:.1f}s (showing from {boundary['start']:.1f}s to {boundary['end']:.1f}s), effect: {scene_effect}")
+
+        video_clip = apply_motion_effect(img_path, duration, scene_effect)
+        video_clip = video_clip.with_start(boundary["start"])
+        clips.append(video_clip)
+
+    print("  Compositing scenes into timeline...")
+    final_video = CompositeVideoClip(clips, size=(VIDEO_WIDTH, VIDEO_HEIGHT))
+
+    print(f"  Loading full audio: {full_audio_path}")
+    full_audio = AudioFileClip(full_audio_path)
+    final_video = final_video.with_audio(full_audio)
+
+    if run_dir:
+        output_path = run_dir / "video.mp4"
+    else:
+        output_path = Path("output") / f"{title}.mp4"
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f"  Exporting to {output_path}...")
+    final_video.write_videofile(
+        str(output_path),
+        fps=FPS,
+        codec="libx264",
+        audio_codec="aac",
+        temp_audiofile=str(output_path.parent / "temp-audio.m4a"),
+        remove_temp=True,
+        preset="medium",
+        threads=4,
+    )
+
+    final_video.close()
     for clip in clips:
         clip.close()
 

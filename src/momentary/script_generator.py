@@ -40,8 +40,7 @@ FLEXIBLE SCENE SPLITTING: You can split narration flexibly across scenes:
 - Adjust the split based on visual interest and pacing, not just sentence boundaries
 - Focus on creating visually distinct moments that match the narration flow
 - Aim for variety: some quick cuts (short narration per scene), some lingering moments (longer narration per scene)
-
-Write naturally, but keep this pacing in mind. Good narration quality is more important than hitting exact timing."""
+"""
 
     idea_section = ""
     if video_idea:
