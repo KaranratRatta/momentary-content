@@ -56,40 +56,6 @@ class TestSplitTextIntoChunks:
             assert chunk.strip() != ""
 
 
-class TestSplitAudioByBoundaries:
-    """Test the audio splitting functionality."""
-
-    def test_empty_boundaries(self, tmp_path):
-        """Test splitting with empty boundaries."""
-        # This test requires actual audio file, so we'll skip if pydub not available
-        pytest.skip("Requires actual MP3 file for testing")
-
-    def test_single_boundary(self, tmp_path):
-        """Test splitting with single boundary."""
-        # This test requires actual audio file, so we'll skip if pydub not available
-        pytest.skip("Requires actual MP3 file for testing")
-
-    def test_boundary_clamping(self, tmp_path):
-        """Test that boundaries are clamped to audio length."""
-        pytest.skip("Requires actual MP3 file for testing")
-
-    def test_invalid_boundary_times(self, tmp_path):
-        """Test handling of invalid boundary times."""
-        pytest.skip("Requires actual MP3 file for testing")
-
-    def test_audio_directory_creation(self, tmp_path):
-        """Test that audio directory is created if it doesn't exist."""
-        pytest.skip("Requires actual MP3 file for testing")
-
-
-class TestIntegration:
-    """Integration tests for the full pipeline."""
-
-    def test_chunking_and_splitting_workflow(self, tmp_path):
-        """Test the workflow of chunking text then splitting audio."""
-        pytest.skip("Requires actual MP3 file for testing")
-
-
 class TestBoundaryAdjustment:
     """Test that scene boundaries preserve inter-scene pauses."""
 
