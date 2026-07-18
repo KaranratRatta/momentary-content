@@ -52,10 +52,7 @@ def _match_scenes_to_timestamps(
         if scene_start is None:
             scene_start = start_times[0] if start_times else 0.0
         if scene_end is None:
-            if i + 1 < len(scenes):
-                scene_end = scene_boundaries[i + 1]["start"] if scene_boundaries else end_times[-1] if end_times else 10.0
-            else:
-                scene_end = end_times[-1] if end_times else 10.0
+            scene_end = end_times[-1] if end_times else 10.0
         
         scene_boundaries.append({
             "scene_index": i,
